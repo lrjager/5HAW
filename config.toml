@@ -1,4 +1,4 @@
-baseURL = "http://example.org/"
+baseURL = "http://5haw.com/"
 languageCode = "en-us"
 title = "5HAW"
 theme = "ezhil"
@@ -11,7 +11,7 @@ googleAnalytics = ""
 disqusShortname = ""
 
 [params]
-	subtitle = "An old data scientist learning new tricks in 5 hours a week"
+	subtitle = "An old data scientist learning new tricks in **5 hours a week**"
 	# Number of posts to show in recent posts list.
 	recentPostsCount = 5
 	# Content types which are excluded from recent posts and archive page.
@@ -42,7 +42,7 @@ weight = 4
 [[params.social]]
 name = "Github"
 icon = "github"
-url = "https://github.com/lrjager"
+url = "https://github.com/lrjager/5haw"
 
 [[params.social]]
 name = "Twitter"

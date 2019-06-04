@@ -4,7 +4,7 @@ title: About 5HAW
 type: page
 ---
 
-**5HAW** is my experience as an old data scientist learning new tricks by committing 5 hours a week to tackling something new (to me) and relevant (to data science), but not necessarily something currently needed for my job. 
+**5HAW** records my experiences as an old data scientist learning new tricks by committing 5 hours a week to tackling something new (to me) and relevant (to data science), but not necessarily something currently needed for my job. 
 
 **My background on day one**
 
