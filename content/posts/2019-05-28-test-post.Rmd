@@ -1,0 +1,24 @@
+---
+title: Test post!
+author: Leah
+date: '2019-05-28'
+slug: test-post
+categories: []
+tags: [help]
+description: This is just a post to see if I can get it to work!
+draft: false
+---
+This is just a post to see if I can get it to work!
+
+```{r include=FALSE}
+library(tidyverse)
+```
+
+```{r}
+x <- rnorm(1000)
+y <- rnorm(1000)
+myData <- data.frame(x,y)
+
+myData %>% ggplot(aes(x,y)) + geom_point()
+
+```
