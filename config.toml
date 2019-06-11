@@ -2,6 +2,7 @@ baseURL = "http://5haw.com/"
 languageCode = "en-us"
 title = "5HAW"
 theme = "ezhil"
+ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
 
 pygmentsstyle = "vs"
 pygmentscodefences = true
