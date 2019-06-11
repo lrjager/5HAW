@@ -1,0 +1,96 @@
+---
+title: 'Week 0: Creating a blog using blogdown'
+author: Leah
+date: '2019-06-11'
+slug: week-0-creating-a-blog-using-blogdown
+categories: []
+tags: []
+draft: false
+---
+
+<script src="/rmarkdown-libs/kePrint/kePrint.js"></script>
+
+
+<p>My first task in this professional development journey was to create a blog to record my progress and keep track of my projects. The old me would have set something up using <a href="https://www.wordpress.com">Wordpress</a> or <a href="https://www.blogger.com">Blogger</a>, but in keeping with the goal of learning new things, I decided to try to set up a blog in RStudio using <a href="https://github.com/rstudio/blogdown">blogdown</a> and <a href="https://gohugo.io/">Hugo</a>.</p>
+<p><strong>Total time: 356 minutes (~ 6 hours)</strong></p>
+<p>This project took me just under 6 hours (spread over 8 days instead of 7). The time breakdown is shown below, and doesn’t include the time it took to write this post almost a week later.</p>
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:center;">
+Tue 5.28
+</th>
+<th style="text-align:center;">
+Wed 5.29
+</th>
+<th style="text-align:center;">
+Thu 5.30
+</th>
+<th style="text-align:center;">
+Fri 5.31
+</th>
+<th style="text-align:center;">
+Sat 6.1
+</th>
+<th style="text-align:center;">
+Sun 6.2
+</th>
+<th style="text-align:center;">
+Mon 6.3
+</th>
+<th style="text-align:center;">
+Tue 6.4
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ff0000">185</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff8f8">5</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff2f2">9</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffb0b0">57</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ff7575">100</span>
+</td>
+</tr>
+</tbody>
+</table>
+<div id="getting-started" class="section level3">
+<h3>Getting started</h3>
+<p>I started by reading the first chapter of the <a href="https://bookdown.org/yihui/blogdown/">Blogdown book</a> as recommended in the README on the <a href="https://github.com/rstudio/blogdown">Blogdown github page</a>. I found it pretty easy to work through the steps in the book to create a blog locally using RStudio. I first created the default blog (with <code>blogdown::new_site()</code>) and explored the different menu options as described in the book chapter. I edited the <code>config.toml</code> file to personalize the blog and <a href="https://www.5haw.com/posts/test-post/">created a test post</a> using R Markdown. Once I was comfortable with the mechanics of how blogdown works in RStudio, I moved on to choosing a theme for my blog.</p>
+</div>
+<div id="choosing-a-theme" class="section level3">
+<h3>Choosing a theme</h3>
+<p>Still following the instruction in Chapter 1 of the Blogdown book, I perused the themes at <a href="https://themes.gohugo.io/" class="uri">https://themes.gohugo.io/</a>. My goal was to pick something that was fairly simple and clean looking. I initially chose <a href="https://themes.gohugo.io/ezhil/">Ezhil</a> and created a new blog with this theme, following the book’s instructions to create a new blog with the theme rather than add the theme to my existing default blog. As before, I personalized the blog by editing the <code>config.toml</code> file to reflect my blog name and subtitle and updated the links to my Github and Twitter pages. I again created a test post and previewed it in RStudio.</p>
+<p>I briefly had buyers remorse, deleted all of the files for my blog, and decided to try a different theme that seemed to have more options for the blog’s layout and personalization. After creating and experimenting with this new theme, I ultimately decided to go back to my original choice. Overall, I probably spent over two hours trying to decide and switching themes before deciding to just move forward with the one I had originally chosen, and I could have spent much more time trying to choose the “perfect” theme. However, my impression is that if I want to change to a different theme down the line, it shouldn’t be too much trouble since the one I’m currently using doesn’t have too many bells and whistles.</p>
+</div>
+<div id="deploying-the-blog" class="section level3">
+<h3>Deploying the blog</h3>
+<p>I had originally planned to use Github pages to deploy my blog to the web, but after reading <a href="https://bookdown.org/yihui/blogdown/deployment.html">Chapter 3: Deployment</a> in the Blogdown book I decided to go with <a href="https://www.netlify.com/">Netlify</a> instead. As before, I basically just followed the instructions in the book to get things set up. First, I created a <a href="https://github.com/lrjager/5HAW">new repository on Github</a> to host my blog. I then created a <code>.gitignore</code> file so that certain files would be ignored when pushing to the repo; I basically used the same <code>.gitignore</code> file as used for the <a href="https://github.com/rbind/simplystats">Simply Statistics</a> blog.</p>
+<p>Next I signed up for a Netlify account, linked it to my Github repo, and built the blog for the first time. I had an error on the first build – it was “building” for more than 10 minutes, when the book had seemed to suggest it might take a few minutes but not longer. I eventually stopped the build and saw an error message that the version of Hugo I had requested for the build was too outdated and not compatible with my chosen theme (I had used version 0.24.1 as shown in the example in the book). I checked the <a href="https://gohugo.io/">Hugo website</a> for the most recent version (0.55.6 – much more recent!), updated on Netlify, and successfully deployed my blog!</p>
+</div>
+<div id="adding-a-customized-domain-name" class="section level3">
+<h3>Adding a customized domain name</h3>
+<p>On a whim I decided to see if the domain name “5haw.com” was available on <a href="https://www.godaddy.com/">GoDaddy.com</a> and it was! It cost $11.34 for a two-year term, plus another $20 to keep the domain registration private. It was very easy to link this domain name to my blog through the Netlify site. I also ended up having my nameserver managed by Netlify by following the instructions on the Netlify site.</p>
+</div>
+<div id="summary" class="section level3">
+<h3>Summary</h3>
+<p>I mostly just followed instructions in the <a href="https://bookdown.org/yihui/blogdown/">Blogdown book</a> to get my blog up and running. Chapters 1 and 3 gave me explicit instructions on setting up and deploying my blog. I also found Chapter 2 helpful to give me an idea of how file structure works within Hugo. I skipped Chapters 4 and 5 but did skim through the Appendices. Overall I found it to be an excellent resource. I definitely don’t know all the ins and outs of using Hugo to create a website, but I feel confident I could now use Blogdown/Hugo to create a personal or academic site as well.</p>
+</div>

@@ -1,0 +1,57 @@
+---
+title: 'Week 0: Creating a blog using blogdown'
+author: Leah
+date: '2019-06-11'
+slug: week-0-creating-a-blog-using-blogdown
+categories: []
+tags: []
+draft: false
+---
+My first task in this professional development journey was to create a blog to record my progress and keep track of my projects.  The old me would have set something up using [Wordpress](https://www.wordpress.com) or [Blogger](https://www.blogger.com), but in keeping with the goal of learning new things, I decided to try to set up a blog in RStudio using [blogdown](https://github.com/rstudio/blogdown) and [Hugo](https://gohugo.io/).
+
+**Total time: 356 minutes (~ 6 hours)**
+
+This project took me just under 6 hours (spread over 8 days instead of 7).  The time breakdown is shown below, and doesn't include the time it took to write this post almost a week later.
+
+```{r time_breakdown, echo=FALSE, message=FALSE}
+library(knitr)
+library(kableExtra)
+library(tidyverse)
+library(formattable)
+
+days <- c("Tue 5.28", "Wed 5.29","Thu 5.30","Fri 5.31","Sat 6.1","Sun 6.2","Mon 6.3","Tue 6.4")
+time <- c(185, 5, 9, 57, 0, 0, 0, 100 )
+mins <- data.frame(time)
+mins %>% 
+  mutate(time=color_tile("transparent", "red")(time)) %>%
+  t() %>%
+  kable("html", col.names=days, row.names=FALSE, escape=FALSE, align="c") %>%
+  kable_styling(position="center") %>%
+  column_spec(1:8, width="6em", border_left=TRUE, border_right=TRUE)
+```
+
+
+### Getting started
+
+I started by reading the first chapter of the [Blogdown book](https://bookdown.org/yihui/blogdown/) as recommended in the README on the [Blogdown github page](https://github.com/rstudio/blogdown).  I found it pretty easy to work through the steps in the book to create a blog locally using RStudio. I first created the default blog (with `blogdown::new_site()`) and explored the different menu options as described in the book chapter.  I edited the `config.toml` file to personalize the blog and [created a test post](https://www.5haw.com/posts/test-post/) using R Markdown.  Once I was comfortable with the mechanics of how blogdown works in RStudio, I moved on to choosing a theme for my blog.
+
+### Choosing a theme 
+
+Still following the instruction in Chapter 1 of the Blogdown book, I perused the themes at [https://themes.gohugo.io/](https://themes.gohugo.io/).  My goal was to pick something that was fairly simple and clean looking.  I initially chose [Ezhil](https://themes.gohugo.io/ezhil/) and created a new blog with this theme, following the book's instructions to create a new blog with the theme rather than add the theme to my existing default blog.  As before, I personalized the blog by editing the `config.toml` file to reflect my blog name and subtitle and updated the links to my Github and Twitter pages.  I again created a test post and previewed it in RStudio.  
+
+I briefly had buyers remorse, deleted all of the files for my blog, and decided to try a different theme that seemed to have more options for the blog's layout and personalization.  After creating and experimenting with this new theme, I ultimately decided to go back to my original choice.  Overall, I probably spent over two hours trying to decide and switching themes before deciding to just move forward with the one I had originally chosen, and I could have spent much more time trying to choose the "perfect" theme.  However,  my impression is that if I want to change to a different theme down the line, it shouldn't be too much trouble since the one I'm currently using doesn't have too many bells and whistles.
+
+### Deploying the blog
+
+I had originally planned to use Github pages to deploy my blog to the web, but after reading [Chapter 3: Deployment](https://bookdown.org/yihui/blogdown/deployment.html) in the Blogdown book I decided to go with [Netlify](https://www.netlify.com/) instead.  As before, I basically just followed the instructions in the book to get things set up.  First, I created a [new repository on Github](https://github.com/lrjager/5HAW) to host my blog.  I then created a `.gitignore` file so that certain files would be ignored when pushing to the repo; I basically used the same `.gitignore` file as used for the [Simply Statistics](https://github.com/rbind/simplystats) blog.
+
+Next I signed up for a Netlify account, linked it to my Github repo, and built the blog for the first time. I had an error on the first build -- it was "building" for more than 10 minutes, when the book had seemed to suggest it might take a few minutes but not longer.  I eventually stopped the build and saw an error message that the version of Hugo I had requested for the build was too outdated and not compatible with my chosen theme (I had used version 0.24.1 as shown in the example in the book).  I checked the [Hugo website](https://gohugo.io/) for the most recent version (0.55.6 -- much more recent!), updated on Netlify, and successfully deployed my blog!
+
+### Adding a customized domain name
+
+On a whim I decided to see if the domain name "5haw.com" was available on [GoDaddy.com](https://www.godaddy.com/) and it was!  It cost \$11.34 for a two-year term, plus another \$20 to keep the domain registration private.  It was very easy to link this domain name to my blog through the Netlify site.  I also ended up having my nameserver managed by Netlify by following the instructions on the Netlify site.
+
+### Summary
+
+I mostly just followed instructions in the [Blogdown book](https://bookdown.org/yihui/blogdown/) to get my blog up and running.  Chapters 1 and 3 gave me explicit instructions on setting up and deploying my blog.  I also found Chapter 2 helpful to give me an idea of how file structure works within Hugo.  I skipped Chapters 4 and 5 but did skim through the Appendices.  Overall I found it to be an excellent resource.  I definitely don't know all the ins and outs of using Hugo to create a website, but I feel confident I could now use Blogdown/Hugo to create a personal or academic site as well.
+
