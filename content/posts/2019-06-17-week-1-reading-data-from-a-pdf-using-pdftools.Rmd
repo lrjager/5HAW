@@ -257,9 +257,6 @@ for (i in 2:length(files)) {
   myData <- bind_rows(myData,di)
   print(i)
 }
-
-dim(myData)
-names(myData)
 ```
 
 Of course, it didn't work perfectly the first time!  Instead there were various warnings/errors that had to be addressed for particular files.  In particular, I had to update my function to deal with:

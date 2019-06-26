@@ -331,10 +331,7 @@ for (i in 2:length(files)) {
   di &lt;- pdfMPC.page1(paste0(&quot;./data/&quot;,files[i]))
   myData &lt;- bind_rows(myData,di)
   print(i)
-}
-
-dim(myData)
-names(myData)</code></pre>
+}</code></pre>
 <p>Of course, it didn’t work perfectly the first time! Instead there were various warnings/errors that had to be addressed for particular files. In particular, I had to update my function to deal with:</p>
 <ol style="list-style-type: decimal">
 <li>Removing commas from counts, for example changing 5,321 to 5321. (<a href="https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2006/Baltimore%20County%20Statistical%20Report%202006.pdf">Baltimore County 2006</a> and others)</li>
