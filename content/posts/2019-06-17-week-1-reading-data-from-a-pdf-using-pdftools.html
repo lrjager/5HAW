@@ -1,0 +1,414 @@
+---
+title: 'Week 1: Reading data from a pdf using pdftools'
+author: Leah
+date: '2019-06-25'
+slug: week-1-reading-data-from-a-pdf-using-pdftools
+description: For week 1, I chose to tackle extracting data from a pdf document using the `R` package `pdftools`.  My goal was to read in the data from the first page of documents which give exposure counts for calls to the Maryland Poison Center for Maryland counties over 2006-2018 and create a tidy and clean dataset of calls to the Maryland Poison Center (MPC).
+categories: []
+tags: []
+draft: false
+---
+
+<script src="/rmarkdown-libs/kePrint/kePrint.js"></script>
+
+
+<style type="text/css">
+pre code, pre, code {
+  white-space: pre-wrap !important;
+}
+</style>
+<p>For week 1, I chose to tackle extracting data from a pdf document using the <code>R</code> package <code>pdftools</code>. My goal was to read in the data from the first page of <a href="https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2018/Allegany%20County%20Statistical%20Report%202018.pdf">this document</a>, which gives exposure counts for calls to the <a href="https://www.mdpoison.com/">Maryland Poison Center</a> for Allegany County in 2018. Then I wanted to repeat this process <a href="https://www.mdpoison.com/factsandreports/">for each county in Maryland for 2006-2018</a> and create a tidy and clean dataset of calls to the Maryland Poison Center (MPC). I am not exactly sure what I’ll do with the data once I’ve collected and cleaned it, but I think it might lend to some cool graphics of some type.</p>
+<p>Here was my game plan:</p>
+<ol style="list-style-type: decimal">
+<li>Extract the data from the Allegany County 2018 pdf document.</li>
+<li>After figuring it out for the Allegany County 2018 document, write a function to extract data from any pdf document with this structure (all MPC county reports have this same structure from 2006-2018)</li>
+<li>Test this function on two additional counties (Prince George’s County, Talbot County) for 2018; update function as needed.</li>
+<li>Download all 312 county pdf files (24 counties by 13 years) for 2006-2018.</li>
+<li>Attempt to extract data from all 312 pdfs, modifying the function as needed to handle any errors.</li>
+<li>Clean the resulting data set.</li>
+</ol>
+<p>I managed to get through the first 5 steps and into the 6th before realizing it was going to take much more than 5 hours to complete this process; I pushed the completion of the project to Week2.</p>
+<p><strong>Time this week: 390 minutes (6.5 hours)</strong></p>
+<p><strong>Total time: 746 minutes (~ 12.5 hours, ~ 6.25 hours/week)</strong></p>
+<p>I spent 6.5 hours on this project this week, with the time breakdown shown below. (As always, this time doesn’t include any blogging time about the project.)</p>
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:center;">
+Mon 6.10
+</th>
+<th style="text-align:center;">
+Tue 6.11
+</th>
+<th style="text-align:center;">
+Wed 6.12
+</th>
+<th style="text-align:center;">
+Thu 6.13
+</th>
+<th style="text-align:center;">
+Fri 6.15
+</th>
+<th style="text-align:center;">
+Sat 6.15
+</th>
+<th style="text-align:center;">
+Sun 6.16
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ff3838">105</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ff4b4b">95</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ff0000">135</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ff9797">55</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0</span>
+</td>
+</tr>
+</tbody>
+</table>
+<p>A stream of consciousness of my analysis process can be found <a href="https://github.com/lrjager/maryland-poison-center-data/blob/master/mpc-data.Rmd">here</a>, and will be updated as I continue this project and eventually tidied after. Here are a few hightlights.</p>
+<div id="reading-in-data-from-a-single-document-pdf_text-vs-pdf_data" class="section level3">
+<h3>Reading in data from a single document: <code>pdf_text</code> vs <code>pdf_data</code></h3>
+<p>Based on some simple googling, I knew that I wanted to use the <a href="https://docs.ropensci.org/pdftools/"><code>pdftools</code></a> package to extract the data. Many of the online examples used the <code>pdf_text()</code> function to read in lines of text from the pdf file, but then I found <a href="https://ropensci.org/technotes/2018/12/14/pdftools-20/">this information about doing low-level text extraction</a> from a pdf using <code>pdf_data()</code> from an updated version of <code>pdftools</code>. Which one was the best one to use? I decided look at the result of each one. In each case, the function returns results separately for each page in the pdf document. Since I’m only interesting in extracting data from the first page of the document, I started by looking at how the first page looks with each function.</p>
+<pre class="r"><code>myData &lt;- pdf_text(&quot;./data/Allegany County Statistical Report 2018.pdf&quot;)
+myData[[1]]</code></pre>
+<pre><code>## [1] &quot;                            2018 Statistical Report\n                                Allegany County, MD\nCounty accounted for 1.7% of human exposure calls to the Maryland Poison Center\nTypes of Calls\n Total human exposures     529           Animal Exposures       24\n &lt; 12 months                14\n 1 year                     51           Information Calls    159\n 2 years                    31\n 3 years                    37\n 4 years                    13\n 5 years                      3\n 6-12 years                 24\n 13-19 years                65\n 20-59 years               220\n &gt;60 years                  62\n Unknown age                  9\nReason for exposure                           Management Site\n Unintentional                  304            On site/non Healthcare Facility 266\n    General                     154            Healthcare Facility             238\n    Environmental                 4            Other                            17\n    Occupational                  5            Refused Referral                  8\n    Therapeutic Error            86\n    Misuse                       52\n    Bite or Sting                 2           Medical Outcome\n    Food Poisoning                1            No Effect                       104\n Intentional                    189            Minor Effect                    305\n    Suspected Suicide           110\n                                               Moderate Effect                  58\n    Misuse                       17\n    Abuse                        60            Major Effect                     24\n    Unknown                       2            Death                             3\n Other                           36            Other/Unknown                    35\n    Contamination/Tampering       7\n    Malicious                     3\n    Adverse Reaction/Drug        12\n    Adverse Reaction/Other        4\n    Other/Unknown                10\n&quot;</code></pre>
+<p>With <code>pdf_text()</code>, we get one long element containing all of the text on the entire page, interspersed with newline characters (<code>\n</code>). If I use this function to extract the data, I will have to split on the newline character in order to separate the rows of data.</p>
+<pre class="r"><code>myData2 &lt;- pdf_data(&quot;./data/Allegany County Statistical Report 2018.pdf&quot;)
+myData2[[1]]</code></pre>
+<pre><code>## # A tibble: 147 x 6
+##    width height     x     y space text       
+##    &lt;int&gt;  &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;lgl&gt; &lt;chr&gt;      
+##  1    31     12   230   116 TRUE  2018       
+##  2    66     12   266   116 TRUE  Statistical
+##  3    44     12   336   116 FALSE Report     
+##  4    50     11   246   132 TRUE  Allegany   
+##  5    44     11   299   132 TRUE  County,    
+##  6    18     11   347   132 FALSE MD         
+##  7    38     11    72   159 TRUE  County     
+##  8    55     11   113   159 TRUE  accounted  
+##  9    14     11   172   159 TRUE  for        
+## 10    27     11   189   159 TRUE  1.7%       
+## # … with 137 more rows</code></pre>
+<p>With <code>pdf_data()</code>, each individual word/number has its own line in the data, with associated (<code>x</code>,<code>y</code>) values to designate the text’s starting location. This means I can keep texts from the same line together by pulling text with the same <code>y</code>-value together. But, beyond this, I can also separate the columns of the data by using the <code>x</code>-value, which is helpful because parts of the document have two pieces of data on the same line.</p>
+<p>You can see what I mean here, where I collapse the text within the same line together based on <code>x</code> values:</p>
+<pre class="r"><code>pdfData &lt;- pdf_data(&quot;./data/Allegany County Statistical Report 2018.pdf&quot;)
+p1Data &lt;- pdfData[[1]]
+
+p1Data %&gt;% 
+  group_by(y) %&gt;% 
+  arrange(x, .by_group=TRUE) %&gt;%
+  summarize(line = paste(text, collapse=&quot; &quot;))</code></pre>
+<pre><code>## # A tibble: 43 x 2
+##        y line                                                                           
+##    &lt;int&gt; &lt;chr&gt;                                                                          
+##  1   116 2018 Statistical Report                                                        
+##  2   132 Allegany County, MD                                                            
+##  3   159 County accounted for 1.7% of human exposure calls to the Maryland Poison Center
+##  4   187 Types of Calls                                                                 
+##  5   217 Total human exposures 529 Animal Exposures 24                                  
+##  6   231 &lt; 12 months 14                                                                 
+##  7   244 1 year 51 Information Calls 159                                                
+##  8   258 2 years 31                                                                     
+##  9   272 3 years 37                                                                     
+## 10   286 4 years 13                                                                     
+## # … with 33 more rows</code></pre>
+<p>In line 5, there are two separate pieces of information: The total number of human exposures was 529 and the number of animal exposures was 24. I want to be able to easily separate these two pieces of information; I can do that by using the <code>y</code>-values for each piece of text to divide the text pieces into two columns.</p>
+<p>I can also see that the first few lines of text don’t contain any data, but do contain the year and county for the document. Taking this into account, my strategy became:</p>
+<ol style="list-style-type: decimal">
+<li>Extract the year and county from the first three lines of the data</li>
+<li>Remove these first three lines</li>
+<li>Divide the remaining text into two columns</li>
+<li>Collapse the text into lines separately within each column</li>
+</ol>
+<p>Here’s a picture of this plan:</p>
+<div class="figure">
+<img src="/posts/2019-06-17-week-1-reading-data-from-a-pdf-using-pdftools_files/MPC_dissection.png" style="width:65.0%" />
+
+</div>
+<p>First, I extract the year and county by ordering the data by the <code>y</code> and <code>x</code> values and then selecting the relevant pieces:</p>
+<pre class="r"><code>orderedData &lt;- p1Data %&gt;% arrange(y,x)
+orderedData</code></pre>
+<pre><code>## # A tibble: 147 x 6
+##    width height     x     y space text       
+##    &lt;int&gt;  &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;lgl&gt; &lt;chr&gt;      
+##  1    31     12   230   116 TRUE  2018       
+##  2    66     12   266   116 TRUE  Statistical
+##  3    44     12   336   116 FALSE Report     
+##  4    50     11   246   132 TRUE  Allegany   
+##  5    44     11   299   132 TRUE  County,    
+##  6    18     11   347   132 FALSE MD         
+##  7    38     11    72   159 TRUE  County     
+##  8    55     11   113   159 TRUE  accounted  
+##  9    14     11   172   159 TRUE  for        
+## 10    27     11   189   159 TRUE  1.7%       
+## # … with 137 more rows</code></pre>
+<pre class="r"><code>year &lt;- orderedData$text[1]
+county &lt;- paste(orderedData$text[4:5],collapse=&quot; &quot;)
+county = gsub(&quot;,&quot;,&quot;&quot;,county)
+
+county; year</code></pre>
+<pre><code>## [1] &quot;Allegany County&quot;</code></pre>
+<pre><code>## [1] &quot;2018&quot;</code></pre>
+<p>Next, I remove these first three header rows and then split into two columns. To do this, I see that the first three rows of data end at <code>y=159</code> and the fourth row starts at <code>y=187</code>, so I can filter on <code>y &gt; 160</code> to remove these rows.</p>
+<pre class="r"><code>p1Data %&gt;% group_by(y) %&gt;% summarize(n=n())</code></pre>
+<pre><code>## # A tibble: 43 x 2
+##        y     n
+##    &lt;int&gt; &lt;int&gt;
+##  1   116     3
+##  2   132     3
+##  3   159    13
+##  4   187     3
+##  5   217     7
+##  6   231     4
+##  7   244     6
+##  8   258     3
+##  9   272     3
+## 10   286     3
+## # … with 33 more rows</code></pre>
+<pre class="r"><code>p1Data &lt;- p1Data %&gt;% filter(y &gt; 160)</code></pre>
+<p>Now I can split the data into two groups by columns. To find where the column break is, I look at the <code>x</code> values for the text <code>7</code> (from the first column) and the text <code>Animal</code> (from the second column)</p>
+<pre class="r"><code>p1Data %&gt;% filter(text==&quot;7&quot; | text==&quot;Animal&quot;)</code></pre>
+<pre><code>## # A tibble: 2 x 6
+##   width height     x     y space text  
+##   &lt;int&gt;  &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;lgl&gt; &lt;chr&gt; 
+## 1    39     11   298   217 TRUE  Animal
+## 2     6     11   258   635 FALSE 7</code></pre>
+<p>I can see that the end of the first column is at <code>x=258</code> and the start of the second column is at <code>x=298</code>, so I can split the columns by <code>x &lt; 260</code> and designate these two columns with a new <code>column</code> variable:</p>
+<pre class="r"><code>p1Data &lt;- p1Data %&gt;%
+  mutate(column=ifelse(x &lt; 260, &quot;Left&quot;, &quot;Right&quot;))</code></pre>
+<p>Finally, I can collapse lines within a column by first grouping by <code>column</code>, then grouping by <code>y</code> and collapsing across <code>x</code>:</p>
+<pre class="r"><code>lineData &lt;- p1Data %&gt;% 
+  group_by(column,y) %&gt;% 
+  arrange(x, .by_group=TRUE) %&gt;%
+  summarize(line = paste(text, collapse=&quot; &quot;))
+
+lineData</code></pre>
+<pre><code>## # A tibble: 47 x 3
+## # Groups:   column [2]
+##    column     y line                     
+##    &lt;chr&gt;  &lt;int&gt; &lt;chr&gt;                    
+##  1 Left     187 Types of Calls           
+##  2 Left     217 Total human exposures 529
+##  3 Left     231 &lt; 12 months 14           
+##  4 Left     244 1 year 51                
+##  5 Left     258 2 years 31               
+##  6 Left     272 3 years 37               
+##  7 Left     286 4 years 13               
+##  8 Left     300 5 years 3                
+##  9 Left     313 6-12 years 24            
+## 10 Left     327 13-19 years 65           
+## # … with 37 more rows</code></pre>
+<p>Now I don’t actually want to collapse across all text in a row, because the last text value is the count of observations in that category. So I want to keep the last text piece as the variable’s <code>value</code> and then use the previous pieces to make up the variable’s <code>name</code>. Once I label these pieces appropriately, I can collapse across the values of the variable’s name to get both the <code>variable</code> itself and the <code>count</code> for that variable.</p>
+<pre class="r"><code>groupedData &lt;- p1Data %&gt;% 
+  group_by(column,y) %&gt;% 
+  arrange(x, .by_group=TRUE) %&gt;%
+  mutate(type = ifelse(x==max(x), &quot;value&quot;, &quot;name&quot;))
+
+groupedData</code></pre>
+<pre><code>## # A tibble: 128 x 8
+## # Groups:   column, y [47]
+##    width height     x     y space text      column type 
+##    &lt;int&gt;  &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;lgl&gt; &lt;chr&gt;     &lt;chr&gt;  &lt;chr&gt;
+##  1    40     12    72   187 TRUE  Types     Left   name 
+##  2    13     12   116   187 TRUE  of        Left   name 
+##  3    33     12   133   187 FALSE Calls     Left   value
+##  4    28     11    77   217 TRUE  Total     Left   name 
+##  5    39     11   109   217 TRUE  human     Left   name 
+##  6    59     11   152   217 FALSE exposures Left   name 
+##  7    20     11   224   217 FALSE 529       Left   value
+##  8     7     11    77   231 TRUE  &lt;         Left   name 
+##  9    13     11    87   231 TRUE  12        Left   name 
+## 10    39     11   104   231 FALSE months    Left   name 
+## # … with 118 more rows</code></pre>
+<pre class="r"><code>countData &lt;- groupedData %&gt;% 
+  group_by(column, y) %&gt;%
+  arrange(x, .by_group=TRUE) %&gt;%
+  summarize(variable = paste(text[type==&quot;name&quot;], collapse=&quot; &quot;), count=text[type==&quot;value&quot;])
+
+countData</code></pre>
+<pre><code>## # A tibble: 47 x 4
+## # Groups:   column [2]
+##    column     y variable              count
+##    &lt;chr&gt;  &lt;int&gt; &lt;chr&gt;                 &lt;chr&gt;
+##  1 Left     187 Types of              Calls
+##  2 Left     217 Total human exposures 529  
+##  3 Left     231 &lt; 12 months           14   
+##  4 Left     244 1 year                51   
+##  5 Left     258 2 years               31   
+##  6 Left     272 3 years               37   
+##  7 Left     286 4 years               13   
+##  8 Left     300 5 years               3    
+##  9 Left     313 6-12 years            24   
+## 10 Left     327 13-19 years           65   
+## # … with 37 more rows</code></pre>
+<p>Finally, I see there are some lines that are just text and not variables/counts, like “Types of Calls”, so I just remove them:</p>
+<pre class="r"><code>countData &lt;- countData %&gt;% filter(count != &quot;Calls&quot;, count!=&quot;exposure&quot;, count!=&quot;Site&quot;, count!=&quot;Outcome&quot;)</code></pre>
+<p>And then pull the variables/counts together into a data frame:</p>
+<pre class="r"><code>myRow &lt;- as.data.frame(t(as.numeric(countData$count)))
+names(myRow) &lt;- countData$variable
+myRow$Year &lt;- year
+myRow$County &lt;- county</code></pre>
+</div>
+<div id="testing-my-process-on-two-additional-documents" class="section level3">
+<h3>Testing my process on two additional documents</h3>
+<p>At this point, based on what I had done so far, I created a function that takes a pdf document and returns a data frame with a row of data for that pdf. I then tested this function of two additional documents, for Prince George’s (PG) County 2018 and Talbot County 2018. My function failed for both of these new documents because:</p>
+<ul>
+<li>The <a href="https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2018/Prince%20Georges%20County%20Statistical%20Report%202018.pdf">pdf document for Prince George’s County</a> has an additional note at the top that reads “NOTE: This report reflects only the calls to the Maryland Poison Center from Prince Georges County. For complete statistics regarding Prince Georges County, statistics from the National Capitol Poison Center should also be consulted.” This is true for all years of data for PG County and also for Montgomery County. This throws off the removal of the top portion of the document, which I’ve set to be just the first 3 lines of data.</li>
+<li><a href="https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2018/Talbot%20County%20Statistical%20Report%202018.pdf">For Talbot County</a>, the text is shifted slightly down on the page so that the initial three lines end at the point <code>y = 164</code> (not <code>y = 159</code> like for my original Alleghany County document). This also throws off the removal of the top portion of the document.</li>
+<li>The county name for PG County has three words (“Prince Georges County”), not two like the original document (“Alleghany County”), which is problematic for how I select the county name. There are many other Maryland counties with three words as well.</li>
+</ul>
+<p>My solution for the first two issues was to not hard code a cut at <code>y &gt; 160</code> to remove the top portion of the document and instead to cut after the 3rd line (whatever <code>y</code>-value that line may have) for all counties except for PG and Montgomery, which I will cut after the 6th line. I can do this with the following code:</p>
+<pre class="r"><code>if (county==&quot;Prince Georges County&quot; | county==&quot;Montgomery County&quot;) {
+  y.cut &lt;- p1Data %&gt;% group_by(y) %&gt;% arrange(y) %&gt;% summarize(n=n()) %&gt;%
+    slice(6) %&gt;% select(y) %&gt;% as.numeric()
+  p1Data &lt;- p1Data %&gt;% filter(y &gt; y.cut + 1)
+} else {
+  y.cut &lt;- p1Data %&gt;% group_by(y) %&gt;% arrange(y) %&gt;% summarize(n=n()) %&gt;%
+    slice(3) %&gt;% select(y) %&gt;% as.numeric()
+  p1Data &lt;- p1Data %&gt;% filter(y &gt; y.cut + 1)
+}</code></pre>
+<p>My solution for the last issue was to just collapse the whole line to get the county name, since this will work regardless of the number of words that make up the county name. This means that I will have “Alleghany County, MD” instead of just “Alleghany County”, but this is fine with me. Here’s the new code to extract county/year:</p>
+<pre class="r"><code>year &lt;- p1Data %&gt;% arrange(y,x) %&gt;% slice(1) %&gt;% select(text) %&gt;% as.numeric()
+
+county &lt;- p1Data %&gt;% group_by(y) %&gt;%
+  arrange(x, .by_group=TRUE) %&gt;% 
+  summarize(line = paste(text, collapse=&quot; &quot;)) %&gt;%
+  slice(2) %&gt;% select(line) %&gt;% as.character()</code></pre>
+</div>
+<div id="downloading-all-pdf-documents" class="section level3">
+<h3>Downloading all pdf documents</h3>
+<p>With my function working on three of the files, it was time to download all of the pdf documents from the web. This was straightforward, since all of the URLs have the same format, except for those from 2016, which I could easily account for separately.</p>
+<p>First I set up the counties and years I wanted:</p>
+<pre class="r"><code>countyNames &lt;- c(&quot;Allegany County&quot;, &quot;Anne Arundel County&quot;, &quot;Baltimore City&quot;, &quot;Baltimore County&quot;, &quot;Calvert County&quot;, &quot;Caroline County&quot;, &quot;Carroll County&quot;, &quot;Cecil County&quot;, &quot;Charles County&quot;, &quot;Dorchester County&quot;, &quot;Frederick County&quot;, &quot;Garrett County&quot;, &quot;Harford County&quot;, &quot;Howard County&quot;, &quot;Kent County&quot;, &quot;Montgomery County&quot;, &quot;Prince Georges County&quot;, &quot;Queen Annes County&quot;, &quot;Somerset County&quot;, &quot;St Marys County&quot;, &quot;Talbot County&quot;, &quot;Washington County&quot;, &quot;Wicomico County&quot;, &quot;Worcester County&quot;)
+
+years &lt;- 2006:2018</code></pre>
+<p>Then I created a link for each county/year combination as well as a file name where the downloaded file would be stored:</p>
+<pre class="r"><code>links &lt;- NULL
+files &lt;- NULL
+for (i in years) {
+  for (j in countyNames) {
+    countyNameForLink &lt;- paste(unlist(strsplit(j, &quot; &quot;)), collapse=&quot;%20&quot;)
+    if (i != 2016) {
+      tempLink &lt;- paste0(&quot;https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf&quot;,i,&quot;/&quot;,countyNameForLink,&quot;%20Statistical%20Report%20&quot;,i,&quot;.pdf&quot;)} else {
+      tempLink &lt;- paste0(&quot;https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/county-pdf-&quot;,i,&quot;/&quot;,countyNameForLink,&quot;%20Statistical%20Report%20&quot;,i,&quot;.pdf&quot;)}
+    tempFile &lt;- paste0(j,&quot; Statistical Report &quot;, i,&quot;.pdf&quot;)
+    links &lt;- c(links, tempLink)
+    files &lt;- c(files, tempFile)
+  }
+}</code></pre>
+<p>After testing, I was able to download and save them all at once:</p>
+<pre class="r"><code>length(links)
+for (i in 1:length(links)) {
+  download.file(links[i], paste0(&quot;./data/&quot;,files[i]))
+}</code></pre>
+</div>
+<div id="processing-all-pdf-documents-with-data-extraction-function" class="section level3">
+<h3>Processing all pdf documents with data extraction function</h3>
+<p>With the documents downloaded, I was hopeful it would be a simple matter to run each pdf document through my function (<code>pdfMPC.page1()</code>) and then bind the data from each document together. The code below will do this; note that the <code>options(warn=2)</code> function allows the warnings to be shown in the middle of the <code>for</code> loop instead of all at the end.</p>
+<pre class="r"><code>d1 &lt;- pdfMPC.page1(paste0(&quot;./data/&quot;,files[1]))
+myData &lt;- d1
+
+options(warn=2)
+for (i in 2:length(files)) {
+  di &lt;- pdfMPC.page1(paste0(&quot;./data/&quot;,files[i]))
+  myData &lt;- bind_rows(myData,di)
+  print(i)
+}
+
+dim(myData)
+names(myData)</code></pre>
+<p>Of course, it didn’t work perfectly the first time! Instead there were various warnings/errors that had to be addressed for particular files. In particular, I had to update my function to deal with:</p>
+<ol style="list-style-type: decimal">
+<li>Removing commas from counts, for example changing 5,321 to 5321. (<a href="https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2006/Baltimore%20County%20Statistical%20Report%202006.pdf">Baltimore County 2006</a> and others)</li>
+<li>Accounting for blank counts where the row had a name but not a value; I set these counts to 0. (<a href="https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2006/Somerset%20County%20Statistical%20Report%202006.pdf">Somerset County 2006</a> and others)</li>
+<li>Removing “Maryland Poison Center” printed across the bottom of page 1 for come counties/years. (<a href="https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2007/Cecil%20County%20Statistical%20Report%202007.pdf">Cecil County 2007</a> and others)</li>
+<li>Handling apostrophes in two county names that caused one line of code to be recognized as two, meaning the header needed to be removed after 4 lines instead of 3. (<a href="https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2011/Queen%20Annes%20County%20Statistical%20Report%202011.pdf">Queen Anne’s County 2011</a>, <a href="https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2011/St%20Marys%20County%20Statistical%20Report%202011.pdf">St Mary’s County 2011</a> and other years)</li>
+</ol>
+<p>After making these modifications, I was finally left with a function that would work for all 312 of the pdf files!</p>
+<pre class="r"><code>pdfMPC.page1 &lt;- function(pdf.file) {
+  require(dplyr)
+  require(pdftools)
+ 
+# read in the pdf document; select the first page 
+pdfData &lt;- pdf_data(pdf.file)
+p1Data &lt;- pdfData[[1]]
+
+# get the year and country from the header
+year &lt;- p1Data %&gt;% arrange(y,x) %&gt;% slice(1) %&gt;% select(text) %&gt;% as.numeric()
+
+county &lt;- p1Data %&gt;% group_by(y) %&gt;%
+  arrange(x, .by_group=TRUE) %&gt;% 
+  summarize(line = paste(text, collapse=&quot; &quot;)) %&gt;%
+  slice(2) %&gt;% select(line) %&gt;% as.character()
+
+# remove the header 
+# the first 3 lines for most, the first 6 lines for PG and M counties
+if (county==&quot;Prince Georges County, MD&quot; | county==&quot;Montgomery County, MD&quot;) {
+  y.cut &lt;- p1Data %&gt;% group_by(y) %&gt;% arrange(y) %&gt;% summarize(n=n()) %&gt;%
+    slice(6) %&gt;% select(y) %&gt;% as.numeric()
+  p1Data &lt;- p1Data %&gt;% filter(y &gt; y.cut + 1)
+} else {
+  if (county==&quot;Queen Anne’s&quot; | county==&quot;St. Mary’s&quot;) {
+      y.cut &lt;- p1Data %&gt;% group_by(y) %&gt;% arrange(y) %&gt;% summarize(n=n()) %&gt;%
+    slice(4) %&gt;% select(y) %&gt;% as.numeric()
+  p1Data &lt;- p1Data %&gt;% filter(y &gt; y.cut + 1)
+  county &lt;- paste0(county,&quot; County, MD&quot;)
+  } else {
+    y.cut &lt;- p1Data %&gt;% group_by(y) %&gt;% arrange(y) %&gt;%
+      summarize(n=n()) %&gt;%
+      slice(3) %&gt;% select(y) %&gt;% as.numeric()
+    p1Data &lt;- p1Data %&gt;% filter(y &gt; y.cut + 1)
+  }
+}
+
+# create the column variable (Left/Right)
+p1Data &lt;- p1Data %&gt;%
+  mutate(column=ifelse(x &lt; 265, &quot;Left&quot;, &quot;Right&quot;))
+
+# group the data by column and height on the page
+# keep the last entry of that column/height as the value
+# assign the remaining entries for that column/height the name
+groupedData &lt;- p1Data %&gt;% 
+  group_by(column,y) %&gt;% 
+  arrange(x, .by_group=TRUE) %&gt;%
+  mutate(type = ifelse(x==max(x) &amp; x==min(x), &quot;name&quot;, ifelse(x==max(x), &quot;value&quot;, &quot;name&quot;)))
+
+# collapse the entries for name together to create the variable name
+# keep the value as the count
+countData &lt;- groupedData %&gt;% 
+  group_by(column, y) %&gt;%
+  arrange(x, .by_group=TRUE) %&gt;%
+  summarize(variable = paste(text[type==&quot;name&quot;], collapse=&quot; &quot;), count=ifelse(is_empty(text[type==&quot;value&quot;])==FALSE, text[type==&quot;value&quot;],&quot;0&quot;))
+
+# remove the rows that aren&#39;t variables/counts
+countData &lt;- countData %&gt;% filter(count != &quot;Calls&quot;, count!=&quot;exposure&quot;, count!=&quot;Site&quot;, count!=&quot;Outcome&quot;, count!=&quot;Center&quot;, variable!=&quot;Maryland&quot;)
+
+# create the data frame for this county/date
+myRow &lt;- as.data.frame(t(as.numeric(gsub(&quot;,&quot;,&quot;&quot;,countData$count))))
+names(myRow) &lt;- countData$variable
+myRow$Year &lt;- year
+myRow$County &lt;- county
+
+return(myRow)
+}</code></pre>
+<p>Althought I now had a data frame with 312 rows, one for each county/year combination, there was still much work to be done in the form of data cleaning. This was the project for Week 2!</p>
+<p>[<em>How did I discover this data in the first place?</em> I’ve thankfully never had to call MPC for my children, but did call them late one night when, in the sleep-deprived state of having a newborn, I accidently took two Claritin instead of one and then panicked because I didn’t know if I should still nurse my child. A very kind pharmacist allayed my fears and pointed me to parental references on their website, and that’s when I discovered all this county-level data tied up in pdf files. I had always intended to try to do something with this data, and now I finally am.]</p>
+</div>

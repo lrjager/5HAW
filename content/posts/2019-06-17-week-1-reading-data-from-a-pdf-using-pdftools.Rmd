@@ -1,0 +1,345 @@
+---
+title: 'Week 1: Reading data from a pdf using pdftools'
+author: Leah
+date: '2019-06-25'
+slug: week-1-reading-data-from-a-pdf-using-pdftools
+description: For week 1, I chose to tackle extracting data from a pdf document using the `R` package `pdftools`.  My goal was to read in the data from the first page of documents which give exposure counts for calls to the Maryland Poison Center for Maryland counties over 2006-2018 and create a tidy and clean dataset of calls to the Maryland Poison Center (MPC).
+categories: []
+tags: []
+draft: false
+---
+
+```{css, echo=FALSE}
+pre code, pre, code {
+  white-space: pre-wrap !important;
+}
+```
+
+```{r setup, include=FALSE, eval=TRUE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+options(width=200)
+```
+
+For week 1, I chose to tackle extracting data from a pdf document using the `R` package `pdftools`.  My goal was to read in the data from the first page of [this document](https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2018/Allegany%20County%20Statistical%20Report%202018.pdf), which gives exposure counts for calls to the [Maryland Poison Center](https://www.mdpoison.com/) for Allegany County in 2018. Then I wanted to repeat this process [for each county in Maryland for 2006-2018](https://www.mdpoison.com/factsandreports/) and create a tidy and clean dataset of calls to the Maryland Poison Center (MPC).  I am not exactly sure what I'll do with the data once I've collected and cleaned it, but I think it might lend to some cool graphics of some type.
+
+Here was my game plan:
+
+(1) Extract the data from the Allegany County 2018 pdf document.
+(2) After figuring it out for the Allegany County 2018 document, write a function to extract data from any pdf document with this structure (all MPC county reports have this same structure from 2006-2018)
+(3) Test this function on two additional counties (Prince George's County, Talbot County) for 2018; update function as needed.
+(4) Download all 312 county pdf files (24 counties by 13 years) for 2006-2018.
+(5) Attempt to extract data from all 312 pdfs, modifying the function as needed to handle any errors.
+(6) Clean the resulting data set.
+
+I managed to get through the first 5 steps and into the 6th before realizing it was going to take much more than 5 hours to complete this process; I pushed the completion of the project to Week2.
+
+**Time this week: 390 minutes (6.5 hours)**
+
+**Total time: 746 minutes (~ 12.5 hours, ~ 6.25 hours/week)**
+
+I spent 6.5 hours on this project this week, with the time breakdown shown below.  (As always, this time doesn't include any blogging time about the project.)
+
+```{r time_breakdown, echo=FALSE, message=FALSE, eval=TRUE}
+library(knitr)
+library(kableExtra)
+library(tidyverse)
+library(formattable)
+
+days <- c("Mon 6.10", "Tue 6.11", "Wed 6.12","Thu 6.13","Fri 6.15","Sat 6.15","Sun 6.16")
+time <- c(0, 105, 95, 135, 0, 55, 0)
+mins <- data.frame(time)
+mins %>% 
+  mutate(time=color_tile("transparent", "red")(time)) %>%
+  t() %>%
+  kable("html", col.names=days, row.names=FALSE, escape=FALSE, align="c") %>%
+  kable_styling(position="center") %>%
+  column_spec(1:7, width="6em", border_left=TRUE, border_right=TRUE)
+```
+
+A stream of consciousness of my analysis process can be found [here](https://github.com/lrjager/maryland-poison-center-data/blob/master/mpc-data.Rmd), and will be updated as I continue this project and eventually tidied after.  Here are a few hightlights.
+
+### Reading in data from a single document: `pdf_text` vs `pdf_data`
+
+```{r packages, eval=TRUE, include=FALSE}
+library(tidyverse)
+library(pdftools)
+```
+
+Based on some simple googling, I knew that I wanted to use the [`pdftools`](https://docs.ropensci.org/pdftools/) package to extract the data.  Many of the online examples used the `pdf_text()` function to read in lines of text from the pdf file, but then I found [this information about doing low-level text extraction](https://ropensci.org/technotes/2018/12/14/pdftools-20/) from a pdf using `pdf_data()` from an updated version of `pdftools`.  Which one was the best one to use?  I decided look at the result of each one.  In each case, the function returns results separately for each page in the pdf document.  Since I'm only interesting in extracting data from the first page of the document, I started by looking at how the first page looks with each function.
+```{r eval=TRUE}
+myData <- pdf_text("./data/Allegany County Statistical Report 2018.pdf")
+myData[[1]]
+```
+
+With `pdf_text()`, we get one long element containing all of the text on the entire page, interspersed with newline characters (`\n`).  If I use this function to extract the data, I will have to split on the newline character in order to separate the rows of data.
+
+```{r eval=TRUE}
+myData2 <- pdf_data("./data/Allegany County Statistical Report 2018.pdf")
+myData2[[1]]
+```
+
+With `pdf_data()`, each individual word/number has its own line in the data, with associated (`x`,`y`) values to designate the text's starting location.  This means I can keep texts from the same line together by pulling text with the same `y`-value together.  But, beyond this, I can also separate the columns of the data by using the `x`-value, which is helpful because parts of the document have two pieces of data on the same line.  
+
+You can see what I mean here, where  I collapse the text within the same line together based on `x` values:
+```{r eval=TRUE}
+pdfData <- pdf_data("./data/Allegany County Statistical Report 2018.pdf")
+p1Data <- pdfData[[1]]
+
+p1Data %>% 
+  group_by(y) %>% 
+  arrange(x, .by_group=TRUE) %>%
+  summarize(line = paste(text, collapse=" "))
+```
+
+In line 5, there are two separate pieces of information: The total number of human exposures was 529 and the number of animal exposures was 24.  I want to be able to easily separate these two pieces of information;  I can do that by using the `y`-values for each piece of text to divide the text pieces into two columns.  
+
+I can also see that the first few lines of text don't contain any data, but do contain the year and county for the document.  Taking this into account, my strategy became:
+
+(1) Extract the year and county from the first three lines of the data
+(2) Remove these first three lines
+(3) Divide the remaining text into two columns
+(4) Collapse the text into lines separately within each column
+
+Here's a picture of this plan:
+
+![](/posts/2019-06-17-week-1-reading-data-from-a-pdf-using-pdftools_files/MPC_dissection.png){width=65%}
+
+First, I extract the year and county by ordering the data by the `y` and `x` values and then selecting the relevant pieces:
+
+```{r eval=TRUE}
+orderedData <- p1Data %>% arrange(y,x)
+orderedData
+year <- orderedData$text[1]
+county <- paste(orderedData$text[4:5],collapse=" ")
+county = gsub(",","",county)
+
+county; year
+```
+
+Next, I remove these first three header rows and then split into two columns.  To do this, I see that the first three rows of data end at `y=159` and the fourth row starts at `y=187`, so I can filter on `y > 160` to remove these rows.
+```{r eval=TRUE}
+p1Data %>% group_by(y) %>% summarize(n=n())
+
+p1Data <- p1Data %>% filter(y > 160)
+```
+
+Now I can split the data into two groups by columns.  To find where the column break is, I look at the `x` values for the text `7` (from the first column) and the text `Animal` (from the second column)
+```{r eval=TRUE}
+p1Data %>% filter(text=="7" | text=="Animal")
+```
+
+I can see that the end of the first column is at `x=258` and the start of the second column is at `x=298`, so I can split the columns by `x < 260` and designate these two columns with a new `column` variable:
+```{r eval=TRUE}
+p1Data <- p1Data %>%
+  mutate(column=ifelse(x < 260, "Left", "Right"))
+```
+
+Finally, I can collapse lines within a column by first grouping by `column`, then grouping by `y` and collapsing across `x`:
+
+```{r eval=TRUE}
+lineData <- p1Data %>% 
+  group_by(column,y) %>% 
+  arrange(x, .by_group=TRUE) %>%
+  summarize(line = paste(text, collapse=" "))
+
+lineData
+```
+
+Now I don't actually want to collapse across all text in a row, because the last text value is the count of observations in that category.  So I want to keep the last text piece as the variable's `value` and then use the previous pieces to make up the variable's `name`.  Once I label these pieces appropriately, I can collapse across the values of the variable's name to get both the `variable` itself and the `count` for that variable.  
+
+```{r eval=TRUE}
+groupedData <- p1Data %>% 
+  group_by(column,y) %>% 
+  arrange(x, .by_group=TRUE) %>%
+  mutate(type = ifelse(x==max(x), "value", "name"))
+
+groupedData
+
+countData <- groupedData %>% 
+  group_by(column, y) %>%
+  arrange(x, .by_group=TRUE) %>%
+  summarize(variable = paste(text[type=="name"], collapse=" "), count=text[type=="value"])
+
+countData
+```
+
+Finally, I see there are some lines that are just text and not variables/counts, like "Types of Calls", so I just remove them:
+```{r eval=TRUE}
+countData <- countData %>% filter(count != "Calls", count!="exposure", count!="Site", count!="Outcome")
+```
+
+And then pull the variables/counts together into a data frame:
+```{r eval=TRUE}
+myRow <- as.data.frame(t(as.numeric(countData$count)))
+names(myRow) <- countData$variable
+myRow$Year <- year
+myRow$County <- county
+```
+
+### Testing my process on two additional documents
+
+At this point, based on what I had done so far, I created a function that takes a pdf document and returns a data frame with a row of data for that pdf.  I then tested this function of two additional documents, for Prince George's (PG) County 2018 and Talbot County 2018.  My function failed for both of these new documents because:
+
+* The [pdf document for Prince George's County](https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2018/Prince%20Georges%20County%20Statistical%20Report%202018.pdf) has an additional note at the top that reads "NOTE: This report reflects only the calls to the Maryland Poison Center from Prince Georges County. For complete statistics regarding Prince Georges County, statistics from the National Capitol Poison Center should also be consulted." This is true for all years of data for PG County and also for Montgomery County.  This throws off the removal of the top portion of the document, which I've set to be just the first 3 lines of data. 
+* [For Talbot County](https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2018/Talbot%20County%20Statistical%20Report%202018.pdf), the text is shifted slightly down on the page so that the initial three lines end at the point `y = 164` (not `y = 159` like for my original Alleghany County document).  This also throws off the removal of the top portion of the document.
+* The county name for PG County has three words ("Prince Georges County"), not two like the original document ("Alleghany County"), which is problematic for how I select the county name.  There are many other Maryland counties with three words as well. 
+
+My solution for the first two issues was to not hard code a cut at `y > 160` to remove the top portion of the document and instead to cut after the 3rd line (whatever `y`-value that line may have) for all counties except for PG and Montgomery, which I will cut after the 6th line.  I can do this with the following code:
+```{r eval=FALSE}
+if (county=="Prince Georges County" | county=="Montgomery County") {
+  y.cut <- p1Data %>% group_by(y) %>% arrange(y) %>% summarize(n=n()) %>%
+    slice(6) %>% select(y) %>% as.numeric()
+  p1Data <- p1Data %>% filter(y > y.cut + 1)
+} else {
+  y.cut <- p1Data %>% group_by(y) %>% arrange(y) %>% summarize(n=n()) %>%
+    slice(3) %>% select(y) %>% as.numeric()
+  p1Data <- p1Data %>% filter(y > y.cut + 1)
+}
+```
+
+My solution for the last issue was to just collapse the whole line to get the county name, since this will work regardless of the number of words that make up the county name.  This means that I will have "Alleghany County, MD" instead of just "Alleghany County", but this is fine with me.  Here's the new code to extract county/year:
+
+```{r eval=FALSE}
+year <- p1Data %>% arrange(y,x) %>% slice(1) %>% select(text) %>% as.numeric()
+
+county <- p1Data %>% group_by(y) %>%
+  arrange(x, .by_group=TRUE) %>% 
+  summarize(line = paste(text, collapse=" ")) %>%
+  slice(2) %>% select(line) %>% as.character()
+```
+
+### Downloading all pdf documents
+
+With my function working on three of the files, it was time to download all of the pdf documents from the web.  This was straightforward, since all of the URLs have the same format, except for those from 2016, which I could easily account for separately.
+
+First I set up the counties and years I wanted:
+```{r}
+countyNames <- c("Allegany County", "Anne Arundel County", "Baltimore City", "Baltimore County", "Calvert County", "Caroline County", "Carroll County", "Cecil County", "Charles County", "Dorchester County", "Frederick County", "Garrett County", "Harford County", "Howard County", "Kent County", "Montgomery County", "Prince Georges County", "Queen Annes County", "Somerset County", "St Marys County", "Talbot County", "Washington County", "Wicomico County", "Worcester County")
+
+years <- 2006:2018
+```
+
+Then I created a link for each county/year combination as well as a file name where the downloaded file would be stored:
+```{r}
+links <- NULL
+files <- NULL
+for (i in years) {
+  for (j in countyNames) {
+    countyNameForLink <- paste(unlist(strsplit(j, " ")), collapse="%20")
+    if (i != 2016) {
+      tempLink <- paste0("https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf",i,"/",countyNameForLink,"%20Statistical%20Report%20",i,".pdf")} else {
+      tempLink <- paste0("https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/county-pdf-",i,"/",countyNameForLink,"%20Statistical%20Report%20",i,".pdf")}
+    tempFile <- paste0(j," Statistical Report ", i,".pdf")
+    links <- c(links, tempLink)
+    files <- c(files, tempFile)
+  }
+}
+```
+
+After testing, I was able to download and save them all at once:
+```{r}
+length(links)
+for (i in 1:length(links)) {
+  download.file(links[i], paste0("./data/",files[i]))
+}
+```
+
+### Processing all pdf documents with data extraction function
+
+With the documents downloaded, I was hopeful it would be a simple matter to run each pdf document through my function (`pdfMPC.page1()`) and then bind the data from each document together.  The code below will do this; note that the `options(warn=2)` function allows the warnings to be shown in the middle of the `for` loop instead of all at the end.
+```{r}
+d1 <- pdfMPC.page1(paste0("./data/",files[1]))
+myData <- d1
+
+options(warn=2)
+for (i in 2:length(files)) {
+  di <- pdfMPC.page1(paste0("./data/",files[i]))
+  myData <- bind_rows(myData,di)
+  print(i)
+}
+
+dim(myData)
+names(myData)
+```
+
+Of course, it didn't work perfectly the first time!  Instead there were various warnings/errors that had to be addressed for particular files.  In particular, I had to update my function to deal with:
+
+(1) Removing commas from counts, for example changing 5,321 to 5321. ([Baltimore County 2006](https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2006/Baltimore%20County%20Statistical%20Report%202006.pdf) and others)
+(2) Accounting for blank counts where the row had a name but not a value; I set these counts to 0. ([Somerset County 2006](https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2006/Somerset%20County%20Statistical%20Report%202006.pdf) and others)
+(3) Removing "Maryland Poison Center" printed across the bottom of page 1 for come counties/years. ([Cecil County 2007](https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2007/Cecil%20County%20Statistical%20Report%202007.pdf) and others)
+(4) Handling apostrophes in two county names that caused one line of code to be recognized as two, meaning the header needed to be removed after 4 lines instead of 3. ([Queen Anne's County 2011](https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2011/Queen%20Annes%20County%20Statistical%20Report%202011.pdf), [St Mary's County 2011](https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2011/St%20Marys%20County%20Statistical%20Report%202011.pdf) and other years)
+
+After making these modifications, I was finally left with a function that would work for all 312 of the pdf files!
+
+```{r updateFunction, eval=TRUE}
+pdfMPC.page1 <- function(pdf.file) {
+  require(dplyr)
+  require(pdftools)
+ 
+# read in the pdf document; select the first page 
+pdfData <- pdf_data(pdf.file)
+p1Data <- pdfData[[1]]
+
+# get the year and country from the header
+year <- p1Data %>% arrange(y,x) %>% slice(1) %>% select(text) %>% as.numeric()
+
+county <- p1Data %>% group_by(y) %>%
+  arrange(x, .by_group=TRUE) %>% 
+  summarize(line = paste(text, collapse=" ")) %>%
+  slice(2) %>% select(line) %>% as.character()
+
+# remove the header 
+# the first 3 lines for most, the first 6 lines for PG and M counties
+if (county=="Prince Georges County, MD" | county=="Montgomery County, MD") {
+  y.cut <- p1Data %>% group_by(y) %>% arrange(y) %>% summarize(n=n()) %>%
+    slice(6) %>% select(y) %>% as.numeric()
+  p1Data <- p1Data %>% filter(y > y.cut + 1)
+} else {
+  if (county=="Queen Anne’s" | county=="St. Mary’s") {
+      y.cut <- p1Data %>% group_by(y) %>% arrange(y) %>% summarize(n=n()) %>%
+    slice(4) %>% select(y) %>% as.numeric()
+  p1Data <- p1Data %>% filter(y > y.cut + 1)
+  county <- paste0(county," County, MD")
+  } else {
+    y.cut <- p1Data %>% group_by(y) %>% arrange(y) %>%
+      summarize(n=n()) %>%
+      slice(3) %>% select(y) %>% as.numeric()
+    p1Data <- p1Data %>% filter(y > y.cut + 1)
+  }
+}
+
+# create the column variable (Left/Right)
+p1Data <- p1Data %>%
+  mutate(column=ifelse(x < 265, "Left", "Right"))
+
+# group the data by column and height on the page
+# keep the last entry of that column/height as the value
+# assign the remaining entries for that column/height the name
+groupedData <- p1Data %>% 
+  group_by(column,y) %>% 
+  arrange(x, .by_group=TRUE) %>%
+  mutate(type = ifelse(x==max(x) & x==min(x), "name", ifelse(x==max(x), "value", "name")))
+
+# collapse the entries for name together to create the variable name
+# keep the value as the count
+countData <- groupedData %>% 
+  group_by(column, y) %>%
+  arrange(x, .by_group=TRUE) %>%
+  summarize(variable = paste(text[type=="name"], collapse=" "), count=ifelse(is_empty(text[type=="value"])==FALSE, text[type=="value"],"0"))
+
+# remove the rows that aren't variables/counts
+countData <- countData %>% filter(count != "Calls", count!="exposure", count!="Site", count!="Outcome", count!="Center", variable!="Maryland")
+
+# create the data frame for this county/date
+myRow <- as.data.frame(t(as.numeric(gsub(",","",countData$count))))
+names(myRow) <- countData$variable
+myRow$Year <- year
+myRow$County <- county
+
+return(myRow)
+}
+```
+
+Althought I now had a data frame with 312 rows, one for each county/year combination, there was still much work to be done in the form of data cleaning.  This was the project for Week 2!
+
+[*How did I discover this data in the first place?*  I've thankfully never had to call MPC for my children, but did call them late one night when, in the sleep-deprived state of having a newborn, I accidently took two Claritin instead of one and then panicked because I didn't know if I should still nurse my child.  A very kind pharmacist allayed my fears and pointed me to parental references on their website, and that's when I discovered all this county-level data tied up in pdf files.  I had always intended to try to do something with this data, and now I finally am.]
