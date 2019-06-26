@@ -181,8 +181,8 @@ myRow$County <- county
 At this point, based on what I had done so far, I created a function that takes a pdf document and returns a data frame with a row of data for that pdf.  I then tested this function of two additional documents, for Prince George's (PG) County 2018 and Talbot County 2018.  My function failed for both of these new documents because:
 
 * The [pdf document for Prince George's County](https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2018/Prince%20Georges%20County%20Statistical%20Report%202018.pdf) has an additional note at the top that reads "NOTE: This report reflects only the calls to the Maryland Poison Center from Prince Georges County. For complete statistics regarding Prince Georges County, statistics from the National Capitol Poison Center should also be consulted." This is true for all years of data for PG County and also for Montgomery County.  This throws off the removal of the top portion of the document, which I've set to be just the first 3 lines of data. 
-* [For Talbot County](https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2018/Talbot%20County%20Statistical%20Report%202018.pdf), the text is shifted slightly down on the page so that the initial three lines end at the point `y = 164` (not `y = 159` like for my original Alleghany County document).  This also throws off the removal of the top portion of the document.
-* The county name for PG County has three words ("Prince Georges County"), not two like the original document ("Alleghany County"), which is problematic for how I select the county name.  There are many other Maryland counties with three words as well. 
+* [For Talbot County](https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2018/Talbot%20County%20Statistical%20Report%202018.pdf), the text is shifted slightly down on the page so that the initial three lines end at the point `y = 164` (not `y = 159` like for my original Allegany County document).  This also throws off the removal of the top portion of the document.
+* The county name for PG County has three words ("Prince Georges County"), not two like the original document ("Allegany County"), which is problematic for how I select the county name.  There are many other Maryland counties with three words as well. 
 
 My solution for the first two issues was to not hard code a cut at `y > 160` to remove the top portion of the document and instead to cut after the 3rd line (whatever `y`-value that line may have) for all counties except for PG and Montgomery, which I will cut after the 6th line.  I can do this with the following code:
 ```{r eval=FALSE}
@@ -197,7 +197,7 @@ if (county=="Prince Georges County" | county=="Montgomery County") {
 }
 ```
 
-My solution for the last issue was to just collapse the whole line to get the county name, since this will work regardless of the number of words that make up the county name.  This means that I will have "Alleghany County, MD" instead of just "Alleghany County", but this is fine with me.  Here's the new code to extract county/year:
+My solution for the last issue was to just collapse the whole line to get the county name, since this will work regardless of the number of words that make up the county name.  This means that I will have "Allegany County, MD" instead of just "Allegany County", but this is fine with me.  Here's the new code to extract county/year:
 
 ```{r eval=FALSE}
 year <- p1Data %>% arrange(y,x) %>% slice(1) %>% select(text) %>% as.numeric()
