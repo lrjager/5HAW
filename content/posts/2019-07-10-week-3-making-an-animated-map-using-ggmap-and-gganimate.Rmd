@@ -1,7 +1,7 @@
 ---
 title: 'Week 3: Making an animated map using maps, ggplot2, and gganimate'
 author: Leah
-date: '2019-07-11'
+date: '2019-07-10'
 slug: week-3-making-an-animated-map-using-maps-ggplot2-and-gganimate
 description: For week 3, I decided to take the clean Maryland Poison Control data that I created in weeks 1 and 2 and create a map of Maryland showing the rates of exposures by county.  Additionally, I wanted to animate this map to show how these rates change over time.
 draft: no
