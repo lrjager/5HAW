@@ -1,0 +1,169 @@
+---
+title: 'Week 3: Making an animated map using maps, ggplot2, and gganimate'
+author: Leah
+date: '2019-07-11'
+slug: week-3-making-an-animated-map-using-maps-ggplot2-and-gganimate
+description: For week 3, I decided to take the clean Maryland Poison Control data that I created in weeks 1 and 2 and create a map of Maryland showing the rates of exposures by county.  Additionally, I wanted to animate this map to show how these rates change over time.
+draft: no
+---
+
+<script src="/rmarkdown-libs/kePrint/kePrint.js"></script>
+
+
+<p>For week 3, I decided to take the <a href="https://github.com/lrjager/maryland-poison-center-data/blob/master/MPCdataFINAL.csv">clean Maryland Poison Control data</a> that I created in <a href="https://www.5haw.com/posts/week-1-reading-data-from-a-pdf-using-pdftools/">weeks 1</a> <a href="https://www.5haw.com/posts/week-2-cleaning-data-extracted-from-a-pdf/">and 2</a> and create a map of Maryland showing the rates of exposures by county. Additionally, I wanted to animate this map to show how these rates change over time.</p>
+<p><strong>Time this week: 360 minutes (6 hours)</strong></p>
+<p><strong>Total time (across 4 weeks): 1,482 minutes (~ 24.7 hours, ~ 6.2 hours/week)</strong></p>
+<p>I spent 6 hours on this project this week, with the time breakdown shown below. The calendar time actually encompassed two weeks, but for one of those weeks I was on vacation and so it won’t count. (As always, this time doesn’t include any blogging time about the project.)</p>
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:center;">
+Mon 6.24
+</th>
+<th style="text-align:center;">
+Tue 6.25
+</th>
+<th style="text-align:center;">
+Wed 6.26
+</th>
+<th style="text-align:center;">
+6.27 - 7.7
+</th>
+<th style="text-align:center;">
+Mon 7.8
+</th>
+<th style="text-align:center;">
+Tues 7.9
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ff7474">90</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ff0000">166</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ff5f5f">104</span>
+</td>
+</tr>
+</tbody>
+</table>
+<p>A stream of consciousness of the process for this project can be found <a href="https://github.com/lrjager/maryland-poison-center-graphics/blob/master/mpc-map.Rmd">here</a>; this may eventually be tidied.</p>
+<p>A final R markdown document that produces the final animated map graphic can be found <a href="https://github.com/lrjager/maryland-poison-center-graphics/blob/master/mpc-map-FINAL.Rmd">here</a>.</p>
+<p>Here are a few thoughts on the process.</p>
+<div id="creating-a-map-of-maryland-counties-using-maps-and-ggplot2" class="section level3">
+<h3>Creating a map of Maryland counties using <code>maps</code> and <code>ggplot2</code></h3>
+<p>To create my map of Maryland counties, I followed <a href="https://eriqande.github.io/rep-res-web/lectures/making-maps-with-R.html">this great tutorial by Eric Anderson</a>, but adapting to Maryland instead of the California example he used. I thought this tutorial did a great job of briefly presenting the different options for plotting with maps in <code>R</code>; after working through the tutorial, it was clear that the <code>maps</code> package together with <code>ggplot2</code> was the way to go for this project.</p>
+<p>I started by just making a map for a single year, 2018. First I read in the MPC data, created the necesssary map data for Maryland state and counties, and merged the MPC data with the map data:</p>
+<pre class="r"><code>library(tidyverse)
+library(maps)
+
+### Read in MPC data
+mpcData &lt;- read_csv(&quot;./data/MPCdataFINAL.csv&quot;)
+
+### md county line map definition data
+md &lt;- map_data(&#39;county&#39;, &#39;maryland&#39;)
+
+### md state line map definition data
+state.md &lt;- map_data(&#39;state&#39;, &#39;maryland&#39;)
+
+### filter to just 2018; get subregions to match
+mpcPlotData &lt;- mpcData %&gt;%
+  filter(Year == 2018) %&gt;%
+  mutate(subregion=tolower(County))
+
+mpcPlotData$subregion = str_replace_all(mpcPlotData$subregion,&quot;, md&quot;, &quot;&quot;)
+mpcPlotData$subregion = str_replace_all(mpcPlotData$subregion,&quot; county&quot;, &quot;&quot;)
+mpcPlotData$subregion = str_replace_all(mpcPlotData$subregion,&quot;’&quot;, &quot;&quot;)
+mpcPlotData$subregion = str_replace_all(mpcPlotData$subregion,&quot;[.]&quot;, &quot;&quot;)
+
+# join mpc to map data
+plotData &lt;- inner_join(md, mpcPlotData, by=&quot;subregion&quot;)</code></pre>
+<p>Now I can plot the total number of human exposures by county for this year:</p>
+<pre class="r"><code>ggplot() + 
+  geom_polygon(data = plotData, aes(x=long, y = lat, fill=TotalHumanExposures, group = group), color=&quot;white&quot;) + 
+  geom_polygon(data = state.md, aes(x=long, y=lat, group=group), color=&quot;black&quot;, fill=NA) +
+  coord_fixed(1.3) +
+  scale_fill_gradient(low = &quot;white&quot;, high = &quot;purple&quot;, na.value=&quot;grey80&quot;) +
+  labs(title=&quot;Total number of human exposures&quot;)</code></pre>
+<p><img src="/posts/2019-07-10-week-3-making-an-animated-map-using-ggmap-and-gganimate_files/figure-html/plot2018-1.png" width="864" /></p>
+<p>I will make the graphic prettier later, by removing axes and gridlines, but for now we can see that Baltimore County and Baltimore City (in dark purple at the top of the map) have much higher numbers of exposures than the other countiesin Maryland. However, counts of exposures are meaningless without considering the populations of the counties as well.</p>
+</div>
+<div id="adding-population-data-from-the-u.s.-census-bureau" class="section level3">
+<h3>Adding population data from the U.S. Census Bureau</h3>
+<p>I was able to find county-level population estimates for Maryland from the U.S. Census Bureau’s Population divisiion through a search on their <a href="https://factfinder.census.gov/faces/nav/jsf/pages/index.xhtml">American FactFinder page</a>. I downloaded this data and you can find it <a href="https://github.com/lrjager/maryland-poison-center-graphics/tree/master/PEP_2018_PEPANNRES">here</a>. (<em>Citation: Annual Estimates of the Resident Population: April 1, 2010 to July 1, 2018, Source: U.S. Census Bureau, Population Division, Release Dates: For counties, municipios, metropolitan statistical areas, micropolitan statistical areas, metropolitan divisions, and combined statistical areas, April 2019.</em>)</p>
+<p>Now we can join this population data to the MPC and map data, but first we need to convert this wide data format to a long format:</p>
+<pre class="r"><code>### county population data
+popData &lt;- read_csv(&quot;./data/PEP_2018_PEPANNRES/PEP_2018_PEPANNRES.csv&quot;)
+
+# wide to long format; get subregions to match
+popLongData &lt;- popData %&gt;%
+  select(`2010`=respop72010, `2011`=respop72011, `2012`=respop72012, `2013`=respop72013, `2014`=respop72014, `2015`=respop72015, `2016`=respop72016, `2017`=respop72017, `2018`=respop72018, subregion=`GEO.display-label`) %&gt;%
+  mutate(subregion=tolower(subregion)) %&gt;%
+  gather(Year, Population, `2010`:`2018`) %&gt;%
+  mutate(Year=as.numeric(Year))
+
+popLongData$subregion = str_replace_all(popLongData$subregion,&quot;, maryland&quot;, &quot;&quot;)
+popLongData$subregion = str_replace_all(popLongData$subregion,&quot; county&quot;, &quot;&quot;)
+popLongData$subregion = str_replace_all(popLongData$subregion,&quot;&#39;&quot;, &quot;&quot;)
+popLongData$subregion = str_replace_all(popLongData$subregion,&quot;[.]&quot;, &quot;&quot;)</code></pre>
+</div>
+<div id="plotting-exposure-rates-by-county" class="section level3">
+<h3>Plotting exposure rates by county</h3>
+<p>Now we can join all three data sets (MPC, map, and population) together and create an exposure rate variable with exposures per 10,000 people:</p>
+<pre class="r"><code>plotData &lt;- inner_join(plotData, popLongData, by=c(&quot;subregion&quot;, &quot;Year&quot;))
+
+# create THE per 10,000 rate variable
+plotData &lt;- plotData %&gt;%
+  mutate(theRate=TotalHumanExposures/Population*10000)</code></pre>
+<p>And finally make a plot of 2018 exposure rates by county:</p>
+<pre class="r"><code>ggplot() + 
+  geom_polygon(data = plotData, aes(x=long, y = lat, fill=theRate, group = group), color=&quot;white&quot;) + 
+  geom_polygon(data = state.md, aes(x=long, y=lat, group=group), color=&quot;black&quot;, fill=NA) +
+  coord_fixed(1.3) +
+  scale_fill_gradient(low = &quot;white&quot;, high = &quot;purple&quot;, na.value=&quot;grey80&quot;) +
+  labs(title=&quot;Total number of human exposures&quot;)</code></pre>
+<p><img src="/posts/2019-07-10-week-3-making-an-animated-map-using-ggmap-and-gganimate_files/figure-html/plot2018rate-1.png" width="864" /></p>
+<p>Now the rates are more comparable across counties, with the exception of Prince George’s and Montgomery Counties, which show a rate close to 0. This is because the Maryland Poison Center only receives a portion of calls from these two counties, with many call being routed to the National Capitol Poison Center (NCPC) in the District of Columbia. To get an accurate picture of the exposure rate in these counties would require additional data from the NCPC, so instead we want to exclude these two counties and fill them with gray on the map.</p>
+<pre class="r"><code>plotData &lt;- plotData %&gt;%
+  mutate(theRate=ifelse(subregion==&quot;prince georges&quot; | subregion==&quot;montgomery&quot;, NA,TotalHumanExposures/Population*10000))
+
+ggplot() + 
+  geom_polygon(data = plotData, aes(x=long, y = lat, fill=theRate, group = group), color=&quot;white&quot;) + 
+  geom_polygon(data = state.md, aes(x=long, y=lat, group=group), color=&quot;black&quot;, fill=NA) +
+  coord_fixed(1.3) +
+  scale_fill_gradient(low = &quot;white&quot;, high = &quot;purple&quot;, na.value=&quot;grey80&quot;) +
+  labs(title=&quot;Total number of human exposures&quot;)</code></pre>
+<p><img src="/posts/2019-07-10-week-3-making-an-animated-map-using-ggmap-and-gganimate_files/figure-html/plot2018rateNOPGM-1.png" width="864" /></p>
+<p>We see that by removing the artificially low rates for these two counties, we are also able to see more differentiation between the other counties since the exposure scale has been re-scaled to a new lowest value.</p>
+</div>
+<div id="animating-exposure-rate-map-over-time-using-gganimate" class="section level3">
+<h3>Animating exposure rate map over time using <code>gganimate</code></h3>
+<p>The last step was to animate the graph using the <code>gganimate</code> package. Again, I chose to figure this out by reading through an online tutorial: <a href="https://towardsdatascience.com/animating-your-data-visualizations-like-a-boss-using-r-f94ae20843e3">Animating your data visualizations like a boss using R</a>. After reading through this tutorial and tweaking, I was able to make a very nice animation of the exposure rates by county over time.</p>
+<div class="figure">
+<img src="/posts/2019-07-10-week-3-making-an-animated-map-using-ggmap-and-gganimate_files/MPCmap.gif" />
+
+</div>
+<p>You can find the full code for this animation <a href="https://github.com/lrjager/maryland-poison-center-graphics/blob/master/mpc-map-FINAL.Rmd">here</a>. It includes additional code in ggplot to make the graphic prettier, but note that once the graphic is set in ggplot, animation require only a few additional lines of code. After fully creating my map and storing it as <code>upgradedMap</code>, from there animating it is pretty straight forward!</p>
+<pre class="r"><code># animate and add year label to animation
+animatedMap &lt;- upgradedMap +
+  geom_text(data=plotData, aes(y=yloc, x=xloc, label=as.character(Year)), check_overlap = TRUE, size=10, fontface=&quot;bold&quot;) +
+  transition_states(Year, 3, 20)
+
+# save as gif
+mapGIF &lt;- animate(animatedMap) </code></pre>
+<p>And it’s easy to save the animation as a gif as well:</p>
+<pre class="r"><code>anim_save(&quot;MPCmap.gif&quot;, animation=mapGIF)</code></pre>
+</div>
