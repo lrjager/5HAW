@@ -1,0 +1,394 @@
+---
+title: 'Week 2: Cleaning data extracted from a pdf'
+author: Leah
+date: '2019-7-10'
+slug: week-2-cleaning-data-extracted-from-a-pdf
+description: TBD
+categories: []
+tags: []
+draft: yes
+---
+
+```{r setup, include=FALSE, eval=TRUE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+options(width=200)
+```
+
+For week 2, I continued the process of creating a clean data set of call data from the Maryland Poison Center (MPC) that [I started in week 1](https://www.5haw.com/posts/week-1-reading-data-from-a-pdf-using-pdftools/).  The idea was to create a data set of call data for all 24 counties in Maryland for the years 2006-2018 from data extracted from pdf documents like [this one](https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2018/Allegany%20County%20Statistical%20Report%202018.pdf).
+
+After week 1, I had successfully created a function to extract the data from the 312 documents and organize it into a data frame.  In week 2 I needed to clean this data frame into something usable and provide a codebook to describe the data.
+
+**Time this week: 376 minutes (~6.25 hours)**
+
+**Total time (across 3 weeks): 1,122 minutes (~ 18.75 hours, ~ 6.25 hours/week)**
+
+I spent 6.25 hours on this project this week, with the time breakdown shown below.  (As always, this time doesn't include any blogging time about the project.)
+
+```{r time_breakdown, echo=FALSE, message=FALSE, eval=TRUE}
+library(knitr)
+library(kableExtra)
+library(tidyverse)
+library(formattable)
+library(pdftools)
+
+days <- c("Mon 6.17", "Tue 6.18", "Wed 6.19","Thu 6.20","Fri 6.21","Sat 6.22","Sun 6.23","Mon 6.24","Tue 6.25")
+time <- c(0, 0, 0, 254, 67, 0, 0, 0, 55)
+mins <- data.frame(time)
+mins %>% 
+  mutate(time=color_tile("transparent", "red")(time)) %>%
+  t() %>%
+  kable("html", col.names=days, row.names=FALSE, escape=FALSE, align="c") %>%
+  kable_styling(position="center") %>%
+  column_spec(1:9, width="6em", border_left=TRUE, border_right=TRUE)
+```
+
+A stream of consciousness of the total analysis process for this project (weeks 1 and 2) can be found [here](https://github.com/lrjager/maryland-poison-center-data/blob/master/mpc-data.Rmd), and will eventually be tidied.
+
+A final R markdown document that produces the cleaned data can be found on Github [here](https://github.com/lrjager/maryland-poison-center-data/blob/master/mpc-data-FINAL.Rmd).  You can also find the [clean data set](https://github.com/lrjager/maryland-poison-center-data/blob/master/MPCdataFINAL.csv) and [codebook](https://github.com/lrjager/maryland-poison-center-data/blob/master/mpc-data-codebook.md) there as well.
+
+Here are a few thoughts on the process.
+
+### Starting with the messy data
+
+```{r eval=TRUE, include=FALSE}
+pdfMPC.page1 <- function(pdf.file) {
+  require(dplyr)
+  require(pdftools)
+ 
+# read in the pdf document; select the first page 
+pdfData <- pdf_data(pdf.file)
+p1Data <- pdfData[[1]]
+
+# get the year and country from the header
+year <- p1Data %>% arrange(y,x) %>% slice(1) %>% select(text) %>% as.numeric()
+
+county <- p1Data %>% group_by(y) %>%
+  arrange(x, .by_group=TRUE) %>% 
+  summarize(line = paste(text, collapse=" ")) %>%
+  slice(2) %>% select(line) %>% as.character()
+
+# remove the header 
+# the first 3 lines for most, the first 6 lines for PG and M counties
+if (county=="Prince Georges County, MD" | county=="Montgomery County, MD") {
+  y.cut <- p1Data %>% group_by(y) %>% arrange(y) %>% summarize(n=n()) %>%
+    slice(6) %>% select(y) %>% as.numeric()
+  p1Data <- p1Data %>% filter(y > y.cut + 1)
+} else {
+  if (county=="Queen Anne’s" | county=="St. Mary’s") {
+      y.cut <- p1Data %>% group_by(y) %>% arrange(y) %>% summarize(n=n()) %>%
+    slice(4) %>% select(y) %>% as.numeric()
+  p1Data <- p1Data %>% filter(y > y.cut + 1)
+  county <- paste0(county," County, MD")
+  } else {
+    y.cut <- p1Data %>% group_by(y) %>% arrange(y) %>%
+      summarize(n=n()) %>%
+      slice(3) %>% select(y) %>% as.numeric()
+    p1Data <- p1Data %>% filter(y > y.cut + 1)
+  }
+}
+
+# create the column variable (Left/Right)
+p1Data <- p1Data %>%
+  mutate(column=ifelse(x < 265, "Left", "Right"))
+
+# group the data by column and height on the page
+# keep the last entry of that column/height as the value
+# assign the remaining entries for that column/height the name
+groupedData <- p1Data %>% 
+  group_by(column,y) %>% 
+  arrange(x, .by_group=TRUE) %>%
+  mutate(type = ifelse(x==max(x) & x==min(x), "name", ifelse(x==max(x), "value", "name")))
+
+# collapse the entries for name together to create the variable name
+# keep the value as the count
+countData <- groupedData %>% 
+  group_by(column, y) %>%
+  arrange(x, .by_group=TRUE) %>%
+  summarize(variable = paste(text[type=="name"], collapse=" "), count=ifelse(is_empty(text[type=="value"])==FALSE, text[type=="value"],"0"))
+
+# remove the rows that aren't variables/counts
+countData <- countData %>% filter(count != "Calls", count!="exposure", count!="Site", count!="Outcome", count!="Center", variable!="Maryland")
+
+# create the data frame for this county/date
+myRow <- as.data.frame(t(as.numeric(gsub(",","",countData$count))))
+names(myRow) <- countData$variable
+myRow$Year <- year
+myRow$County <- county
+
+return(myRow)
+}
+```
+
+After week 1, I had a nice function, `pdfMPC.page1()`,for extracting data from a pdf document of the MPC type. When I run this function on a single pdf document, I get a very nice-looking data frame with 45 variables:
+```{r eval=TRUE}
+myData <- pdfMPC.page1("./data/Allegany County Statistical Report 2018.pdf")
+dim(myData)
+myData
+```
+
+There is still work to be done here, like making variable names that are easier to work with in `R`, but it looks very nice.  However, when I extract the data from all 312 documents and combine it together, I get something that's much messier!
+
+```{r eval=TRUE, include=FALSE}
+countyNames <- c("Allegany County", "Anne Arundel County", "Baltimore City", "Baltimore County", "Calvert County", "Caroline County", "Carroll County", "Cecil County", "Charles County", "Dorchester County", "Frederick County", "Garrett County", "Harford County", "Howard County", "Kent County", "Montgomery County", "Prince Georges County", "Queen Annes County", "Somerset County", "St Marys County", "Talbot County", "Washington County", "Wicomico County", "Worcester County")
+
+years <- 2006:2018
+
+links <- NULL
+files <- NULL
+for (i in years) {
+  for (j in countyNames) {
+    countyNameForLink <- paste(unlist(strsplit(j, " ")), collapse="%20")
+    if (i != 2016) {
+      tempLink <- paste0("https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf",i,"/",countyNameForLink,"%20Statistical%20Report%20",i,".pdf")} else {
+      tempLink <- paste0("https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/county-pdf-",i,"/",countyNameForLink,"%20Statistical%20Report%20",i,".pdf")}
+    tempFile <- paste0(j," Statistical Report ", i,".pdf")
+    links <- c(links, tempLink)
+    files <- c(files, tempFile)
+  }
+}
+
+#length(links)
+#for (i in 1:length(links)) {
+#  download.file(links[i], paste0("./data/",files[i]))
+#}
+```
+
+
+```{r eval=TRUE}
+d1 <- pdfMPC.page1(paste0("./data/",files[1]))
+myData <- d1
+
+options(warn=2)
+for (i in 2:length(files)) {
+  di <- pdfMPC.page1(paste0("./data/",files[i]))
+  myData <- bind_rows(myData,di)
+}
+
+dim(myData)
+names(myData)
+```
+
+It's easier to see if we look at the variables names in alphabetical order:
+```{r eval=TRUE}
+myNames <- data.frame(names=names(myData))
+myNames %>% arrange(names)
+```
+
+We can see that some issues are just differences in capitalization, like `Bite or sting` verses `Bite or Sting`.  There are also differences in that sometimes the age groups are given as `<60 years` while other times the age groups are broken down into smaller age ranges.  There are also lots of typos and different orderings for all of the `Unknown` and `Other` categories.  
+
+### Adding higher-level categories to variable names
+
+This is an additional problem, because it's not immediately clear which higher category the `Other` or `Unknown` variable belongs to.  For example, in [this pdf document](https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2018/Baltimore%20County%20Statistical%20Report%202018.pdf), you can see that there's an `Unknown` categories for each reason for exposure (Unintentional, Intentional, and Other) as well as for Management Site and also an `Other/Unknown` category for Medical Outcome. I thought the best thing to do would be to try to capture the higher category when capturing the lower category, so that the `Unknown` for `Unintentional` would become `Unintentional:Unknown` and the second `Unknown` for `Intentional` would become `Intentional:Unknown` and so on.  Basically, I needed to assign the higher categories of `Age`, `Unintentional`, `Other`, `Management Site`, and `Medical Outcome` whenever I am getting a subcategory count.  Then, when data for the individual counties are merged together, the `Unknown` and `Other` categories will get properly matched.
+
+I initially planned to do this by taking into account the fact that the subcategories are indented, but instead ended up just using the `y`-distance between the category heading to define the categories and assigning higher categories in a `variableSub` variable, and then pasting the heading and subcategory together! 
+
+```{r}
+## Designate the "Other Reason" variable to say "Other Reason"
+countData$variable[countData$variable=="Other" & countData$xmin==min(countData$xmin)] <- "Other Reason"
+
+y.age.min <- countData$y[countData$variable=="Total human exposures"]
+y.age.max <- countData$y[countData$variable=="Unintentional"]
+y.un.min <- countData$y[countData$variable=="Unintentional"]
+y.un.max <- countData$y[countData$variable=="Intentional"]
+y.int.min <- countData$y[countData$variable=="Intentional"]
+y.int.max <- countData$y[countData$variable=="Other Reason"]
+y.other.min <- countData$y[countData$variable=="Other Reason"]
+
+y.ms.min <- countData$y[countData$variable=="Management"]
+y.ms.max <- countData$y[countData$variable=="Medical"]
+y.mo.min <- countData$y[countData$variable=="Medical"]
+
+countData <- countData %>%
+  mutate(variableSub=ifelse(column=="Left" & y > y.age.min & y < y.age.max, "Age:",
+         ifelse(column=="Left" & y > y.un.min & y < y.un.max, "Unintentional:",
+         ifelse(column=="Left" & y > y.int.min & y < y.int.max, "Intentional:",
+         ifelse(column=="Left" & y > y.other.min, "Other:",
+         ifelse(column=="Right" & y > y.ms.min & y < y.ms.max, "ManageSite:",
+         ifelse(column=="Right" & y > y.mo.min, "MedOutcome:", "")))))))
+
+# remove the rows that aren't variables/counts
+countData <- countData %>% filter(count != "Calls", count!="exposure", count!="Site", count!="Outcome", variable!="Medical", variable!="Outcome")
+
+countData <- countData %>%
+  mutate(name=paste0(variableSub, variable))
+```
+
+```{r eval=TRUE, include=FALSE}
+pdfMPC.page1 <- function(pdf.file, i) {
+  require(dplyr)
+  require(pdftools)
+ 
+# read in the pdf document; select the first page 
+pdfData <- pdf_data(pdf.file)
+p1Data <- pdfData[[1]]
+
+# get the year and country from the header
+year <- p1Data %>% arrange(y,x) %>% slice(1) %>% select(text) %>% as.numeric()
+
+county <- p1Data %>% group_by(y) %>%
+  arrange(x, .by_group=TRUE) %>% 
+  summarize(line = paste(text, collapse=" ")) %>%
+  slice(2) %>% select(line) %>% as.character()
+
+# remove the header 
+# the first 3 lines for most, the first 6 lines for PG and M counties
+if (county=="Prince Georges County, MD" | county=="Montgomery County, MD") {
+  y.cut <- p1Data %>% group_by(y) %>% arrange(y) %>% summarize(n=n()) %>%
+    slice(6) %>% select(y) %>% as.numeric()
+  p1Data <- p1Data %>% filter(y > y.cut + 1)
+} else {
+  if (county=="Queen Anne’s" | county=="St. Mary’s") {
+      y.cut <- p1Data %>% group_by(y) %>% arrange(y) %>% summarize(n=n()) %>%
+    slice(4) %>% select(y) %>% as.numeric()
+  p1Data <- p1Data %>% filter(y > y.cut + 1)
+  county <- paste0(county," County, MD")
+  } else {
+    y.cut <- p1Data %>% group_by(y) %>% arrange(y) %>%
+      summarize(n=n()) %>%
+      slice(3) %>% select(y) %>% as.numeric()
+    p1Data <- p1Data %>% filter(y > y.cut + 1)
+  }
+}
+
+# create the column variable (Left/Right)
+p1Data <- p1Data %>%
+  mutate(column=ifelse(x < 265, "Left", "Right"))
+
+# group the data by column and height on the page
+# keep the last entry of that column/height as the value
+# assign the remaining entries for that column/height the name
+groupedData <- p1Data %>% 
+  group_by(column,y) %>% 
+  arrange(x, .by_group=TRUE) %>%
+  mutate(type = ifelse(x==max(x) & x==min(x), "name", ifelse(x==max(x), "value", "name")))
+
+# collapse the entries for name together to create the variable name
+# keep the value as the count
+countData <- groupedData %>% 
+  group_by(column, y) %>%
+  arrange(x, .by_group=TRUE) %>%
+  summarize(variable = paste(text[type=="name"], collapse=" "), count=ifelse(is_empty(text[type=="value"])==FALSE, text[type=="value"],"0"), xmin=min(x))
+
+# remove the any variables/counts that include any part of "Maryland Center"
+countData <- countData %>% filter(count != "Maryland", count!="Center",  variable!="Maryland", variable!="Center", variable!="Types of", variable!="Reason for")
+
+## Designate the "Other Reason" variable to say "Other Reason"
+countData$variable[countData$variable=="Other" & countData$xmin==min(countData$xmin)] <- "Other Reason"
+
+y.age.min <- countData$y[countData$variable=="Total human exposures"]
+y.age.max <- countData$y[countData$variable=="Unintentional"]
+y.un.min <- countData$y[countData$variable=="Unintentional"]
+y.un.max <- countData$y[countData$variable=="Intentional"]
+y.int.min <- countData$y[countData$variable=="Intentional"]
+y.int.max <- countData$y[countData$variable=="Other Reason"]
+y.other.min <- countData$y[countData$variable=="Other Reason"]
+
+y.ms.min <- countData$y[countData$variable=="Management"]
+y.ms.max <- countData$y[countData$variable=="Medical"]
+y.mo.min <- countData$y[countData$variable=="Medical"]
+
+countData <- countData %>%
+  mutate(variableSub=ifelse(column=="Left" & y > y.age.min & y < y.age.max, "Age:",
+         ifelse(column=="Left" & y > y.un.min & y < y.un.max, "Unintentional:",
+         ifelse(column=="Left" & y > y.int.min & y < y.int.max, "Intentional:",
+         ifelse(column=="Left" & y > y.other.min, "Other:",
+         ifelse(column=="Right" & y > y.ms.min & y < y.ms.max, "ManageSite:",
+         ifelse(column=="Right" & y > y.mo.min, "MedOutcome:", "")))))))
+
+# remove the rows that aren't variables/counts
+countData <- countData %>% filter(count != "Calls", count!="exposure", count!="Site", count!="Outcome", variable!="Medical", variable!="Outcome")
+
+countData <- countData %>%
+  mutate(name=paste0(variableSub, variable))
+
+# create the data frame for this county/date
+myRow <- as.data.frame(t(as.numeric(gsub(",","",countData$count))))
+names(myRow) <- countData$name
+myRow$Year <- year
+myRow$County <- county
+myRow$fileNo <- i #to help diagnose
+
+return(myRow)
+}
+```
+
+Once I include these higher order category labels in my function (and made some additional changes to deal with spacing in specific documents), I can process the data again.  I now end up with more variables (70 verses 62), which leads me to believe that some of the `Unknown` variables where being merged together when they shouldn't have!  
+
+```{r eval=TRUE, include=FALSE}
+d1 <- pdfMPC.page1(paste0("./data/",files[1]),1)
+myData <- d1
+
+options(warn=2)
+for (i in 2:length(files)) {
+  di <- pdfMPC.page1(paste0("./data/",files[i]),i)
+  myData <- bind_rows(myData,di)
+}
+```
+
+```{r eval=TRUE}
+dim(myData)
+sort(names(myData))
+```
+
+### Cleaning typos in variables names and combining variables
+
+Next I needed to clean up typos and combine variables that were measuring the same thing.  I had to do this carefully to be sure the variables were really measuring the same thing by first checking for overlap between variables.  For example, I wanted to combine all the different variables for "Unknown age" together, but had to first make sure they were really just different labelings and not truly different variables by checking for overlap:
+
+```{r ageCleanExample, eval=TRUE}
+# Age recoding
+### Unknown
+pairs(~`Age:Unknown` + `Age:Unknown age` + `Age:Unknown Age`, data=myData )
+myData <- myData %>% 
+  mutate(`Age:Unknown`=ifelse(!is.na(`Age:Unknown`), `Age:Unknown`, `Age:Unknown age`)) %>% select(-`Age:Unknown age`) %>%
+  mutate(`Age:Unknown`=ifelse(!is.na(`Age:Unknown`), `Age:Unknown`, `Age:Unknown Age`)) %>% select(-`Age:Unknown Age`)
+```
+
+### Reordering variables in a meaningful way
+
+After combining all such necessary variables, I re-ordered the data in a meaningful way to put the county/year variables at the front:
+```{r}
+myData <- myData %>%
+  select(sort(names(myData)))
+
+myData <- myData %>%
+  select(fileNo, County, Year, `Total human exposures`, `Animal Exposures`, `Information Calls`, `Age:< 12 months`, `Age:1 year`, `Age:2 years`, `Age:3 years`, `Age:4 years`, `Age:5 years`, `Age:6-12 years`, `Age:13-19 years`, `Age:20-59 years`, `Age:>60 years`, everything())
+```
+ 
+### Further data cleaning
+
+Then I had to do a little more cleaning to address the following issues:
+
+* There was a clear typo in the pdf documents for Caroline County for 2010-2018; the variable labeled `<60 years` was really supposed to be `>60 years` to match all the other counties.
+* It was clear the `Adult` age category encompassed the 20-59 and >60 subcategories. From 2006-2009 MPC used the adult category.  From 2010 on, MPC started splitting adult into two age groups. I created an `Adult` category for all years but also left the age subcategories for the later years. I also combined the `Unknown Adult` categories into the `Adult` category I generated for years 2010-2018.
+* I noticed that in 2014 there were 25 counties and in 2015 there were only 23 counties.  Somerset County was showing up twice in 2014 and not at all in 2015. Looking at the pdf documents for Somerset for these two years, the pdf documents are in fact different (have different numbers) but both are labeled 2014 on the first page of the document.  However,the one from the 2015 link is labeled 2015 on the second page, so I assigned the data from this document to Somerset 2015.
+
+### Modifying variable names
+
+Finally, I made the names of the variables easier to work with in `R` by removing `:` and `/` and spaces!
+```{r}
+names(myData)
+namesNew <- names(myData)
+
+namesNew <- gsub(pattern=":",replacement="_", namesNew)
+namesNew <- gsub(pattern=" or s",replacement="/S", namesNew)
+namesNew <- gsub(pattern="/",replacement=".", namesNew)
+namesNew <- gsub(pattern="<",replacement="Under", namesNew)
+namesNew <- gsub(pattern=">",replacement="Over", namesNew)
+namesNew <- gsub(pattern="years",replacement="yr", namesNew)
+namesNew <- gsub(pattern="year",replacement="yr", namesNew)
+namesNew <- gsub(pattern="months",replacement="mo", namesNew)
+namesNew <- gsub(pattern=" p",replacement=" P", namesNew)
+namesNew <- gsub(pattern=" s",replacement=" S", namesNew)
+namesNew <- gsub(pattern=" a",replacement=" A", namesNew)
+namesNew <- gsub(pattern=" c",replacement=" C", namesNew)
+namesNew <- gsub(pattern="Site.non",replacement="Site.Non", namesNew)
+namesNew <- gsub(pattern=" ",replacement="", namesNew)
+
+names(myData) <- namesNew
+```
+
+### Final clean data set!
+
+After all that work, I have a clean data set ready to be analyzed; you can find this data [here](https://github.com/lrjager/maryland-poison-center-data/blob/master/MPCdataFINAL.csv) and the accompanying codebook [here](https://github.com/lrjager/maryland-poison-center-data/blob/master/mpc-data-codebook.md).
+
+This project made me appreciate again how much work goes into assembling and cleaning data before any actual analysis can be done!

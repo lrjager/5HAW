@@ -1,0 +1,307 @@
+---
+title: 'Week 2: Cleaning data extracted from a pdf'
+author: Leah
+date: '2019-7-10'
+slug: week-2-cleaning-data-extracted-from-a-pdf
+description: TBD
+categories: []
+tags: []
+draft: yes
+---
+
+<script src="/rmarkdown-libs/kePrint/kePrint.js"></script>
+
+
+<p>For week 2, I continued the process of creating a clean data set of call data from the Maryland Poison Center (MPC) that <a href="https://www.5haw.com/posts/week-1-reading-data-from-a-pdf-using-pdftools/">I started in week 1</a>. The idea was to create a data set of call data for all 24 counties in Maryland for the years 2006-2018 from data extracted from pdf documents like <a href="https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2018/Allegany%20County%20Statistical%20Report%202018.pdf">this one</a>.</p>
+<p>After week 1, I had successfully created a function to extract the data from the 312 documents and organize it into a data frame. In week 2 I needed to clean this data frame into something usable and provide a codebook to describe the data.</p>
+<p><strong>Time this week: 376 minutes (~6.25 hours)</strong></p>
+<p><strong>Total time (across 3 weeks): 1,122 minutes (~ 18.75 hours, ~ 6.25 hours/week)</strong></p>
+<p>I spent 6.25 hours on this project this week, with the time breakdown shown below. (As always, this time doesn’t include any blogging time about the project.)</p>
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:center;">
+Mon 6.17
+</th>
+<th style="text-align:center;">
+Tue 6.18
+</th>
+<th style="text-align:center;">
+Wed 6.19
+</th>
+<th style="text-align:center;">
+Thu 6.20
+</th>
+<th style="text-align:center;">
+Fri 6.21
+</th>
+<th style="text-align:center;">
+Sat 6.22
+</th>
+<th style="text-align:center;">
+Sun 6.23
+</th>
+<th style="text-align:center;">
+Mon 6.24
+</th>
+<th style="text-align:center;">
+Tue 6.25
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ff0000">254</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffbbbb">67</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0</span>
+</td>
+<td style="text-align:center;width: 6em; border-left:1px solid;border-right:1px solid;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffc7c7">55</span>
+</td>
+</tr>
+</tbody>
+</table>
+<p>A stream of consciousness of the total analysis process for this project (weeks 1 and 2) can be found <a href="https://github.com/lrjager/maryland-poison-center-data/blob/master/mpc-data.Rmd">here</a>, and will eventually be tidied.</p>
+<p>A final R markdown document that produces the cleaned data can be found on Github <a href="https://github.com/lrjager/maryland-poison-center-data/blob/master/mpc-data-FINAL.Rmd">here</a>. You can also find the <a href="https://github.com/lrjager/maryland-poison-center-data/blob/master/MPCdataFINAL.csv">clean data set</a> and <a href="https://github.com/lrjager/maryland-poison-center-data/blob/master/mpc-data-codebook.md">codebook</a> there as well.</p>
+<p>Here are a few thoughts on the process.</p>
+<div id="starting-with-the-messy-data" class="section level3">
+<h3>Starting with the messy data</h3>
+<p>After week 1, I had a nice function, <code>pdfMPC.page1()</code>,for extracting data from a pdf document of the MPC type. When I run this function on a single pdf document, I get a very nice-looking data frame with 45 variables:</p>
+<pre class="r"><code>myData &lt;- pdfMPC.page1(&quot;./data/Allegany County Statistical Report 2018.pdf&quot;)
+dim(myData)</code></pre>
+<pre><code>## [1]  1 45</code></pre>
+<pre class="r"><code>myData</code></pre>
+<pre><code>##   Total human exposures &lt; 12 months 1 year 2 years 3 years 4 years 5 years 6-12 years 13-19 years 20-59 years &gt;60 years Unknown age Unintentional General Environmental Occupational Therapeutic Error
+## 1                   529          14     51      31      37      13       3         24          65         220        62           9           304     154             4            5                86
+##   Misuse Bite or Sting Food Poisoning Intentional Suspected Suicide Misuse Abuse Unknown Other Contamination/Tampering Malicious Adverse Reaction/Drug Adverse Reaction/Other Other/Unknown
+## 1     52             2              1         189               110     17    60       2    36                       7         3                    12                      4            10
+##   Animal Exposures Information Calls On site/non Healthcare Facility Healthcare Facility Other Refused Referral No Effect Minor Effect Moderate Effect Major Effect Death Other/Unknown Year
+## 1               24               159                             266                 238    17                8       104          305              58           24     3            35 2018
+##                County
+## 1 Allegany County, MD</code></pre>
+<p>There is still work to be done here, like making variable names that are easier to work with in <code>R</code>, but it looks very nice. However, when I extract the data from all 312 documents and combine it together, I get something that’s much messier!</p>
+<pre class="r"><code>d1 &lt;- pdfMPC.page1(paste0(&quot;./data/&quot;,files[1]))
+myData &lt;- d1
+
+options(warn=2)
+for (i in 2:length(files)) {
+  di &lt;- pdfMPC.page1(paste0(&quot;./data/&quot;,files[i]))
+  myData &lt;- bind_rows(myData,di)
+}
+
+dim(myData)</code></pre>
+<pre><code>## [1] 312  62</code></pre>
+<pre class="r"><code>names(myData)</code></pre>
+<pre><code>##  [1] &quot;Total human exposures&quot;           &quot;&lt; 12 months&quot;                     &quot;1 year&quot;                          &quot;2 years&quot;                         &quot;3 years&quot;                        
+##  [6] &quot;4 years&quot;                         &quot;5 years&quot;                         &quot;6-12 years&quot;                      &quot;13-19 years&quot;                     &quot;Adult&quot;                          
+## [11] &quot;Unknown age&quot;                     &quot;Unintentional&quot;                   &quot;General&quot;                         &quot;Environmental&quot;                   &quot;Occupational&quot;                   
+## [16] &quot;Therapeutic Error&quot;               &quot;Misuse&quot;                          &quot;Bite or Sting&quot;                   &quot;Food Poisoning&quot;                  &quot;Intentional&quot;                    
+## [21] &quot;Suspected Suicide&quot;               &quot;Abuse&quot;                           &quot;Unknown&quot;                         &quot;Other&quot;                           &quot;Contamination/Tampering&quot;        
+## [26] &quot;Malicious&quot;                       &quot;Adverse Reaction/Drug&quot;           &quot;Adverse Reaction/Other&quot;          &quot;Animal Exposures&quot;                &quot;Information Calls&quot;              
+## [31] &quot;On site/non Healthcare Facility&quot; &quot;Healthcare Facility&quot;             &quot;Refused Referral&quot;                &quot;No Effect&quot;                       &quot;Minor Effect&quot;                   
+## [36] &quot;Moderate Effect&quot;                 &quot;Major Effect&quot;                    &quot;Death&quot;                           &quot;Other/Unknown&quot;                   &quot;Year&quot;                           
+## [41] &quot;County&quot;                          &quot;Food poisoning&quot;                  &quot;Center&quot;                          &quot;Unknown Reason&quot;                  &quot;Adverse Reaction/Food&quot;          
+## [46] &quot;Withdrawal&quot;                      &quot;Contamination/tampering&quot;         &quot;Unknown Age&quot;                     &quot;Bite or sting&quot;                   &quot;20-59 years&quot;                    
+## [51] &quot;&gt;60 years&quot;                       &quot;Unknown adult&quot;                   &quot;Unknown child&quot;                   &quot;&lt;60 years&quot;                       &quot;Unkknown&quot;                       
+## [56] &quot;Unknown/Other&quot;                   &quot;Unknown Adult&quot;                   &quot;Other/unknown&quot;                   &quot;Other?Unknown&quot;                   &quot;Other/Unknown Reason&quot;           
+## [61] &quot;Outcome&quot;                         &quot;Medical&quot;</code></pre>
+<p>It’s easier to see if we look at the variables names in alphabetical order:</p>
+<pre class="r"><code>myNames &lt;- data.frame(names=names(myData))
+myNames %&gt;% arrange(names)</code></pre>
+<pre><code>##                              names
+## 1                      &lt; 12 months
+## 2                        &lt;60 years
+## 3                        &gt;60 years
+## 4                           1 year
+## 5                      13-19 years
+## 6                          2 years
+## 7                      20-59 years
+## 8                          3 years
+## 9                          4 years
+## 10                         5 years
+## 11                      6-12 years
+## 12                           Abuse
+## 13                           Adult
+## 14           Adverse Reaction/Drug
+## 15           Adverse Reaction/Food
+## 16          Adverse Reaction/Other
+## 17                Animal Exposures
+## 18                   Bite or sting
+## 19                   Bite or Sting
+## 20                          Center
+## 21         Contamination/tampering
+## 22         Contamination/Tampering
+## 23                          County
+## 24                           Death
+## 25                   Environmental
+## 26                  Food poisoning
+## 27                  Food Poisoning
+## 28                         General
+## 29             Healthcare Facility
+## 30               Information Calls
+## 31                     Intentional
+## 32                    Major Effect
+## 33                       Malicious
+## 34                         Medical
+## 35                    Minor Effect
+## 36                          Misuse
+## 37                 Moderate Effect
+## 38                       No Effect
+## 39                    Occupational
+## 40 On site/non Healthcare Facility
+## 41                           Other
+## 42                   Other?Unknown
+## 43                   Other/unknown
+## 44                   Other/Unknown
+## 45            Other/Unknown Reason
+## 46                         Outcome
+## 47                Refused Referral
+## 48               Suspected Suicide
+## 49               Therapeutic Error
+## 50           Total human exposures
+## 51                   Unintentional
+## 52                        Unkknown
+## 53                         Unknown
+## 54                   Unknown adult
+## 55                   Unknown Adult
+## 56                     Unknown age
+## 57                     Unknown Age
+## 58                   Unknown child
+## 59                  Unknown Reason
+## 60                   Unknown/Other
+## 61                      Withdrawal
+## 62                            Year</code></pre>
+<p>We can see that some issues are just differences in capitalization, like <code>Bite or sting</code> verses <code>Bite or Sting</code>. There are also differences in that sometimes the age groups are given as <code>&lt;60 years</code> while other times the age groups are broken down into smaller age ranges. There are also lots of typos and different orderings for all of the <code>Unknown</code> and <code>Other</code> categories.</p>
+</div>
+<div id="adding-higher-level-categories-to-variable-names" class="section level3">
+<h3>Adding higher-level categories to variable names</h3>
+<p>This is an additional problem, because it’s not immediately clear which higher category the <code>Other</code> or <code>Unknown</code> variable belongs to. For example, in <a href="https://www.mdpoison.com/media/SOP/mdpoisoncom/factsandreports/reports/countypdf2018/Baltimore%20County%20Statistical%20Report%202018.pdf">this pdf document</a>, you can see that there’s an <code>Unknown</code> categories for each reason for exposure (Unintentional, Intentional, and Other) as well as for Management Site and also an <code>Other/Unknown</code> category for Medical Outcome. I thought the best thing to do would be to try to capture the higher category when capturing the lower category, so that the <code>Unknown</code> for <code>Unintentional</code> would become <code>Unintentional:Unknown</code> and the second <code>Unknown</code> for <code>Intentional</code> would become <code>Intentional:Unknown</code> and so on. Basically, I needed to assign the higher categories of <code>Age</code>, <code>Unintentional</code>, <code>Other</code>, <code>Management Site</code>, and <code>Medical Outcome</code> whenever I am getting a subcategory count. Then, when data for the individual counties are merged together, the <code>Unknown</code> and <code>Other</code> categories will get properly matched.</p>
+<p>I initially planned to do this by taking into account the fact that the subcategories are indented, but instead ended up just using the <code>y</code>-distance between the category heading to define the categories and assigning higher categories in a <code>variableSub</code> variable, and then pasting the heading and subcategory together!</p>
+<pre class="r"><code>## Designate the &quot;Other Reason&quot; variable to say &quot;Other Reason&quot;
+countData$variable[countData$variable==&quot;Other&quot; &amp; countData$xmin==min(countData$xmin)] &lt;- &quot;Other Reason&quot;
+
+y.age.min &lt;- countData$y[countData$variable==&quot;Total human exposures&quot;]
+y.age.max &lt;- countData$y[countData$variable==&quot;Unintentional&quot;]
+y.un.min &lt;- countData$y[countData$variable==&quot;Unintentional&quot;]
+y.un.max &lt;- countData$y[countData$variable==&quot;Intentional&quot;]
+y.int.min &lt;- countData$y[countData$variable==&quot;Intentional&quot;]
+y.int.max &lt;- countData$y[countData$variable==&quot;Other Reason&quot;]
+y.other.min &lt;- countData$y[countData$variable==&quot;Other Reason&quot;]
+
+y.ms.min &lt;- countData$y[countData$variable==&quot;Management&quot;]
+y.ms.max &lt;- countData$y[countData$variable==&quot;Medical&quot;]
+y.mo.min &lt;- countData$y[countData$variable==&quot;Medical&quot;]
+
+countData &lt;- countData %&gt;%
+  mutate(variableSub=ifelse(column==&quot;Left&quot; &amp; y &gt; y.age.min &amp; y &lt; y.age.max, &quot;Age:&quot;,
+         ifelse(column==&quot;Left&quot; &amp; y &gt; y.un.min &amp; y &lt; y.un.max, &quot;Unintentional:&quot;,
+         ifelse(column==&quot;Left&quot; &amp; y &gt; y.int.min &amp; y &lt; y.int.max, &quot;Intentional:&quot;,
+         ifelse(column==&quot;Left&quot; &amp; y &gt; y.other.min, &quot;Other:&quot;,
+         ifelse(column==&quot;Right&quot; &amp; y &gt; y.ms.min &amp; y &lt; y.ms.max, &quot;ManageSite:&quot;,
+         ifelse(column==&quot;Right&quot; &amp; y &gt; y.mo.min, &quot;MedOutcome:&quot;, &quot;&quot;)))))))
+
+# remove the rows that aren&#39;t variables/counts
+countData &lt;- countData %&gt;% filter(count != &quot;Calls&quot;, count!=&quot;exposure&quot;, count!=&quot;Site&quot;, count!=&quot;Outcome&quot;, variable!=&quot;Medical&quot;, variable!=&quot;Outcome&quot;)
+
+countData &lt;- countData %&gt;%
+  mutate(name=paste0(variableSub, variable))</code></pre>
+<p>Once I include these higher order category labels in my function (and made some additional changes to deal with spacing in specific documents), I can process the data again. I now end up with more variables (70 verses 62), which leads me to believe that some of the <code>Unknown</code> variables where being merged together when they shouldn’t have!</p>
+<pre class="r"><code>dim(myData)</code></pre>
+<pre><code>## [1] 312  70</code></pre>
+<pre class="r"><code>sort(names(myData))</code></pre>
+<pre><code>##  [1] &quot;Age:&lt; 12 months&quot;                            &quot;Age:&lt;60 years&quot;                              &quot;Age:&gt;60 years&quot;                              &quot;Age:1 year&quot;                                
+##  [5] &quot;Age:13-19 years&quot;                            &quot;Age:2 years&quot;                                &quot;Age:20-59 years&quot;                            &quot;Age:3 years&quot;                               
+##  [9] &quot;Age:4 years&quot;                                &quot;Age:5 years&quot;                                &quot;Age:6-12 years&quot;                             &quot;Age:Adult&quot;                                 
+## [13] &quot;Age:Unknown&quot;                                &quot;Age:Unknown adult&quot;                          &quot;Age:Unknown Adult&quot;                          &quot;Age:Unknown age&quot;                           
+## [17] &quot;Age:Unknown Age&quot;                            &quot;Age:Unknown child&quot;                          &quot;Animal Exposures&quot;                           &quot;County&quot;                                    
+## [21] &quot;fileNo&quot;                                     &quot;Information Calls&quot;                          &quot;Intentional&quot;                                &quot;Intentional:Abuse&quot;                         
+## [25] &quot;Intentional:Misuse&quot;                         &quot;Intentional:Suspected Suicide&quot;              &quot;Intentional:Unknown&quot;                        &quot;ManageSite:Healthcare Facility&quot;            
+## [29] &quot;ManageSite:On site/non Healthcare Facility&quot; &quot;ManageSite:Other&quot;                           &quot;ManageSite:Other/unknown&quot;                   &quot;ManageSite:Other/Unknown&quot;                  
+## [33] &quot;ManageSite:Refused Referral&quot;                &quot;ManageSite:Unknown&quot;                         &quot;MedOutcome:Death&quot;                           &quot;MedOutcome:Major Effect&quot;                   
+## [37] &quot;MedOutcome:Minor Effect&quot;                    &quot;MedOutcome:Moderate Effect&quot;                 &quot;MedOutcome:No Effect&quot;                       &quot;MedOutcome:Other/Unknown&quot;                  
+## [41] &quot;Other Reason&quot;                               &quot;Other:Adverse Reaction/Drug&quot;                &quot;Other:Adverse Reaction/Food&quot;                &quot;Other:Adverse Reaction/Other&quot;              
+## [45] &quot;Other:Contamination/tampering&quot;              &quot;Other:Contamination/Tampering&quot;              &quot;Other:Malicious&quot;                            &quot;Other:Other&quot;                               
+## [49] &quot;Other:Other?Unknown&quot;                        &quot;Other:Other/Unknown&quot;                        &quot;Other:Other/Unknown Reason&quot;                 &quot;Other:Unknown&quot;                             
+## [53] &quot;Other:Unknown Reason&quot;                       &quot;Other:Unknown/Other&quot;                        &quot;Other:Withdrawal&quot;                           &quot;Total human exposures&quot;                     
+## [57] &quot;Unintentional&quot;                              &quot;Unintentional:Bite or sting&quot;                &quot;Unintentional:Bite or Sting&quot;                &quot;Unintentional:Environmental&quot;               
+## [61] &quot;Unintentional:Food poisoning&quot;               &quot;Unintentional:Food Poisoning&quot;               &quot;Unintentional:General&quot;                      &quot;Unintentional:Misuse&quot;                      
+## [65] &quot;Unintentional:Occupational&quot;                 &quot;Unintentional:Other/Unknown&quot;                &quot;Unintentional:Therapeutic Error&quot;            &quot;Unintentional:Unkknown&quot;                    
+## [69] &quot;Unintentional:Unknown&quot;                      &quot;Year&quot;</code></pre>
+</div>
+<div id="cleaning-typos-in-variables-names-and-combining-variables" class="section level3">
+<h3>Cleaning typos in variables names and combining variables</h3>
+<p>Next I needed to clean up typos and combine variables that were measuring the same thing. I had to do this carefully to be sure the variables were really measuring the same thing by first checking for overlap between variables. For example, I wanted to combine all the different variables for “Unknown age” together, but had to first make sure they were really just different labelings and not truly different variables by checking for overlap:</p>
+<pre class="r"><code># Age recoding
+### Unknown
+pairs(~`Age:Unknown` + `Age:Unknown age` + `Age:Unknown Age`, data=myData )</code></pre>
+<p><img src="/posts/2019-06-25-week-2-cleaning-data-extracted-from-a-pdf_files/figure-html/ageCleanExample-1.png" width="672" /></p>
+<pre class="r"><code>myData &lt;- myData %&gt;% 
+  mutate(`Age:Unknown`=ifelse(!is.na(`Age:Unknown`), `Age:Unknown`, `Age:Unknown age`)) %&gt;% select(-`Age:Unknown age`) %&gt;%
+  mutate(`Age:Unknown`=ifelse(!is.na(`Age:Unknown`), `Age:Unknown`, `Age:Unknown Age`)) %&gt;% select(-`Age:Unknown Age`)</code></pre>
+</div>
+<div id="reordering-variables-in-a-meaningful-way" class="section level3">
+<h3>Reordering variables in a meaningful way</h3>
+<p>After combining all such necessary variables, I re-ordered the data in a meaningful way to put the county/year variables at the front:</p>
+<pre class="r"><code>myData &lt;- myData %&gt;%
+  select(sort(names(myData)))
+
+myData &lt;- myData %&gt;%
+  select(fileNo, County, Year, `Total human exposures`, `Animal Exposures`, `Information Calls`, `Age:&lt; 12 months`, `Age:1 year`, `Age:2 years`, `Age:3 years`, `Age:4 years`, `Age:5 years`, `Age:6-12 years`, `Age:13-19 years`, `Age:20-59 years`, `Age:&gt;60 years`, everything())</code></pre>
+</div>
+<div id="further-data-cleaning" class="section level3">
+<h3>Further data cleaning</h3>
+<p>Then I had to do a little more cleaning to address the following issues:</p>
+<ul>
+<li>There was a clear typo in the pdf documents for Caroline County for 2010-2018; the variable labeled <code>&lt;60 years</code> was really supposed to be <code>&gt;60 years</code> to match all the other counties.</li>
+<li>It was clear the <code>Adult</code> age category encompassed the 20-59 and &gt;60 subcategories. From 2006-2009 MPC used the adult category. From 2010 on, MPC started splitting adult into two age groups. I created an <code>Adult</code> category for all years but also left the age subcategories for the later years. I also combined the <code>Unknown Adult</code> categories into the <code>Adult</code> category I generated for years 2010-2018.</li>
+<li>I noticed that in 2014 there were 25 counties and in 2015 there were only 23 counties. Somerset County was showing up twice in 2014 and not at all in 2015. Looking at the pdf documents for Somerset for these two years, the pdf documents are in fact different (have different numbers) but both are labeled 2014 on the first page of the document. However,the one from the 2015 link is labeled 2015 on the second page, so I assigned the data from this document to Somerset 2015.</li>
+</ul>
+</div>
+<div id="modifying-variable-names" class="section level3">
+<h3>Modifying variable names</h3>
+<p>Finally, I made the names of the variables easier to work with in <code>R</code> by removing <code>:</code> and <code>/</code> and spaces!</p>
+<pre class="r"><code>names(myData)
+namesNew &lt;- names(myData)
+
+namesNew &lt;- gsub(pattern=&quot;:&quot;,replacement=&quot;_&quot;, namesNew)
+namesNew &lt;- gsub(pattern=&quot; or s&quot;,replacement=&quot;/S&quot;, namesNew)
+namesNew &lt;- gsub(pattern=&quot;/&quot;,replacement=&quot;.&quot;, namesNew)
+namesNew &lt;- gsub(pattern=&quot;&lt;&quot;,replacement=&quot;Under&quot;, namesNew)
+namesNew &lt;- gsub(pattern=&quot;&gt;&quot;,replacement=&quot;Over&quot;, namesNew)
+namesNew &lt;- gsub(pattern=&quot;years&quot;,replacement=&quot;yr&quot;, namesNew)
+namesNew &lt;- gsub(pattern=&quot;year&quot;,replacement=&quot;yr&quot;, namesNew)
+namesNew &lt;- gsub(pattern=&quot;months&quot;,replacement=&quot;mo&quot;, namesNew)
+namesNew &lt;- gsub(pattern=&quot; p&quot;,replacement=&quot; P&quot;, namesNew)
+namesNew &lt;- gsub(pattern=&quot; s&quot;,replacement=&quot; S&quot;, namesNew)
+namesNew &lt;- gsub(pattern=&quot; a&quot;,replacement=&quot; A&quot;, namesNew)
+namesNew &lt;- gsub(pattern=&quot; c&quot;,replacement=&quot; C&quot;, namesNew)
+namesNew &lt;- gsub(pattern=&quot;Site.non&quot;,replacement=&quot;Site.Non&quot;, namesNew)
+namesNew &lt;- gsub(pattern=&quot; &quot;,replacement=&quot;&quot;, namesNew)
+
+names(myData) &lt;- namesNew</code></pre>
+</div>
+<div id="final-clean-data-set" class="section level3">
+<h3>Final clean data set!</h3>
+<p>After all that work, I have a clean data set ready to be analyzed; you can find this data <a href="https://github.com/lrjager/maryland-poison-center-data/blob/master/MPCdataFINAL.csv">here</a> and the accompanying codebook <a href="https://github.com/lrjager/maryland-poison-center-data/blob/master/mpc-data-codebook.md">here</a>.</p>
+<p>This project made me appreciate again how much work goes into assembling and cleaning data before any actual analysis can be done!</p>
+</div>
