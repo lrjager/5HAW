@@ -1,0 +1,64 @@
+---
+title: 'Weeks 4 through 6: Reading “R for Data Science"'
+author: Leah
+date: '2019-08-03'
+slug: weeks-4-through-6-reading-r-for-data-science
+description: TBD
+draft: yes
+---
+```{r setup, include=FALSE, eval=TRUE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+options(width=200)
+```
+
+My next project was to read through the book [R for Data Science](https://r4ds.had.co.nz/) by [Hadley Wickham](http://hadley.nz/) and [Garrett Grolemund](https://resources.rstudio.com/authors/garrett-grolemund).  I'm hoping to update the R-programming course that accompanies our large Public Health Biostatistics course, so I was hoping this book would give me some ideas for restructuring the order of topics in the course.
+
+**Time these 3 weeks: 724 minutes (~ 12 hours)**
+
+**Total time (across 7 weeks): 2,206 minutes (~ 36.75 hours, ~ 5.25 hours/week)**
+
+It ended up taking me about 3 weeks of project time to read the book (4 weeks of calendar time -- there was a week with some major childcare issues that I am choosing to skip over).
+
+I spent about 12 hours on this project across these three weeks, with the time breakdown shown below.  (As always, this time doesn't include any blogging time about the project.)
+
+```{r time_breakdown, echo=FALSE, message=FALSE, eval=TRUE}
+library(knitr)
+library(kableExtra)
+library(tidyverse)
+library(formattable)
+library(pdftools)
+
+days <- c("Mon 7.8", "Tue 7.9", "Wed 7.10","Thurs 7.11","Fri 7.12","Sat 7.13", "Sun 7.14")
+time <- c(0, 0, 15, 106, 0, 40, 73)
+mins <- data.frame(time)
+mins %>% 
+  mutate(time=color_tile("transparent", "red")(time)) %>%
+  t() %>%
+  kable("html", col.names=days, row.names=FALSE, escape=FALSE, align="c") %>%
+  kable_styling(position="center") %>%
+  column_spec(1:7, width="6em", border_left=TRUE, border_right=TRUE)
+
+days <- c("Mon 7.22", "Tue 7.23", "Wed 7.24","Thurs 7.25","Fri 7.26","Sat 7.27", "Sun 7.28")
+time <- c(0, 0, 0, 55, 165, 90, 0)
+mins <- data.frame(time)
+mins %>% 
+  mutate(time=color_tile("transparent", "red")(time)) %>%
+  t() %>%
+  kable("html", col.names=days, row.names=FALSE, escape=FALSE, align="c") %>%
+  kable_styling(position="center") %>%
+  column_spec(1:7, width="6em", border_left=TRUE, border_right=TRUE)
+
+days <- c("Mon 7.29", "Tue 7.30", "Wed 7.31","Thurs 8.1","Fri 8.2","Sat 8.3", "Sun 8.4")
+time <- c(0, 65, 55, 60, 0, 0, 0)
+mins <- data.frame(time)
+mins %>% 
+  mutate(time=color_tile("transparent", "red")(time)) %>%
+  t() %>%
+  kable("html", col.names=days, row.names=FALSE, escape=FALSE, align="c") %>%
+  kable_styling(position="center") %>%
+  column_spec(1:7, width="6em", border_left=TRUE, border_right=TRUE)
+```
+
+No Github repos to share for this project!
+
+I'm really glad I read this book!  I probably should have read it a long time ago.  Although I've been using pieces of the `tidyverse` for awhile, I definitely learned some new things that will make my coding better in the future.  I also ended up with a long list of additional things to read (when I get the time!)   And, most importantly, I've been able to sketch out a plan to re-work that programming course I'm been wanting to update.
